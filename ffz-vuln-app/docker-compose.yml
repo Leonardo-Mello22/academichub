@@ -18,6 +18,16 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     restart: unless-stopped
 
+  nginx:
+    build: ./nginx
+    container_name: academichub_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - academichub
+    restart: unless-stopped
+
   db:
     image: postgres:16
     container_name: academichub_db

@@ -26,8 +26,22 @@ docker compose up --build -d
 A aplicação ficará disponível em:
 
 ```text
-http://localhost:31337
+http://localhost:31337   (Flask direto, sem TLS)
+https://localhost        (via proxy Nginx, com HTTPS)
 ```
+
+### HTTPS
+
+A comunicação HTTPS é feita por um proxy reverso Nginx (`nginx/`) que termina TLS
+usando um **certificado autoassinado**, gerado automaticamente no build da imagem
+(`nginx/Dockerfile`). Por se tratar de um ambiente de laboratório/controlado, o
+navegador exibirá um aviso de certificado não confiável — isso é esperado. Em um
+ambiente de produção real, esse certificado seria substituído por um emitido por
+uma CA confiável (ex: Let's Encrypt).
+
+O acesso direto à porta `31337` (HTTP puro, sem TLS) foi mantido de propósito para
+permitir comparar o tráfego "antes" (sem criptografia) e "depois" (via HTTPS na
+porta 443) como evidência na etapa de análise de segurança.
 
 Para acompanhar os logs:
 
