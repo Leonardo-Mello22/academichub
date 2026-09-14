@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Mensagens — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>✉️ Mensagens</h2>
+  <a href="/mensagens/nova" class="btn btn-primary">Nova Mensagem</a>
+</div>
+
+<div class="card">
+  {% if messages %}
+  <table class="table">
+    <thead>
+      <tr><th>De</th><th>Assunto</th><th>Data</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for m in messages %}
+      <tr class="{% if not m[2] %}msg-unread{% endif %}">
+        <td>{{ m[4] or m[5] }}</td>
+        <td>{{ m[1] }}{% if not m[2] %} <span class="badge">Nova</span>{% endif %}</td>
+        <td>{{ m[3] }}</td>
+        <td><a href="/mensagens/{{ m[0] }}" class="btn btn-sm">Abrir</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted">Nenhuma mensagem recebida.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Usuários — Admin — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>👥 Gerenciar Usuários</h2>
+  <a href="/admin" class="btn btn-secondary">← Admin</a>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>ID</th><th>Usuário</th><th>E-mail</th><th>Hash da Senha</th><th>Papel</th><th>Ativo</th><th>Ações</th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u[0] }}</td>
+        <td>{{ u[1] }}</td>
+        <td>{{ u[2] }}</td>
+        <td><code class="hash">{{ u[3] }}</code></td>
+        <td><span class="badge badge-role badge-{{ u[4] }}">{{ u[4] }}</span></td>
+        <td>{% if u[7] %}✅{% else %}❌{% endif %}</td>
+        <td>
+          <a href="/admin/usuarios/{{ u[0] }}/editar" class="btn btn-sm">Editar</a>
+          <form method="POST" action="/admin/usuarios/{{ u[0] }}/deletar" style="display:inline">
+            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Confirmar exclusão?')">Deletar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

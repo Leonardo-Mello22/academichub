@@ -1,0 +1,38 @@
+services:
+  academichub:
+    build: .
+    container_name: academichub
+    ports:
+      - "31337:31337"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PG_HOST=db
+      - PG_PORT=5432
+      - PG_USER=academichub
+      - PG_PASSWORD=academichub123
+      - PG_DATABASE=academichub
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    container_name: academichub_db
+    environment:
+      - POSTGRES_DB=academichub
+      - POSTGRES_USER=academichub
+      - POSTGRES_PASSWORD=academichub123
+    volumes:
+      - academichub_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U academichub -d academichub"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  academichub_data:
+  academichub_uploads:

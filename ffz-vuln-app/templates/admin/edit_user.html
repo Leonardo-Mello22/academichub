@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Editar Usuário — Admin — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>✏️ Editar Usuário: {{ user[1] }}</h2>
+  <a href="/admin/usuarios" class="btn btn-secondary">← Usuários</a>
+</div>
+
+<div class="card form-card">
+  <form method="POST" action="/admin/usuarios/{{ user[0] }}/editar">
+    <div class="form-group">
+      <label>Papel (Role)</label>
+      <select name="role" class="form-control">
+        <option value="aluno" {% if user[4] == 'aluno' %}selected{% endif %}>Aluno</option>
+        <option value="professor" {% if user[4] == 'professor' %}selected{% endif %}>Professor</option>
+        <option value="admin" {% if user[4] == 'admin' %}selected{% endif %}>Admin</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>
+        <input type="checkbox" name="is_active" {% if user[7] %}checked{% endif %}> Conta ativa
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Nova senha (deixe em branco para manter)</label>
+      <input type="password" name="password" class="form-control" placeholder="••••••••">
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+  </form>
+</div>
+{% endblock %}

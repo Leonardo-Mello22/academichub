@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ course[2] }} — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><span class="course-code">{{ course[1] }}</span> {{ course[2] }}</h2>
+  <a href="/disciplinas" class="btn btn-secondary">← Voltar</a>
+</div>
+
+<div class="card detail-card">
+  <div class="detail-row">
+    <span class="detail-label">Professor(a)</span>
+    <span class="detail-value">{{ course[6] }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Descrição</span>
+    <span class="detail-value">{{ course[3] }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Vagas</span>
+    <span class="detail-value">{{ course[5] }}</span>
+  </div>
+</div>
+
+{% if session.get('role') == 'aluno' %}
+<div class="card">
+  {% if enrolled %}
+  <p class="alert alert-success">✅ Você está matriculado nesta disciplina.</p>
+  {% else %}
+  <form method="POST" action="/disciplinas/{{ course[0] }}/matricular">
+    <button type="submit" class="btn btn-primary">Matricular-se</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h3>Alunos Matriculados ({{ students|length }})</h3>
+  {% if students %}
+  <ul class="list-plain">
+    {% for s in students %}
+    <li><a href="/perfil/{{ s[0] }}">{{ s[1] }}</a> — {{ s[2] }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-muted">Nenhum aluno matriculado.</p>
+  {% endif %}
+</div>
+{% endblock %}

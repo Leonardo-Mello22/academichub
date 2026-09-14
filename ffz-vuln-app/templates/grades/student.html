@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Notas do Aluno — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>📊 Notas de {{ student[5] or student[1] }}</h2>
+  <a href="/painel" class="btn btn-secondary">← Voltar</a>
+</div>
+
+<div class="card">
+  {% if grades %}
+  <table class="table">
+    <thead>
+      <tr><th>Disciplina</th><th>Atividade</th><th>Nota</th><th>Comentário</th></tr>
+    </thead>
+    <tbody>
+      {% for g in grades %}
+      <tr>
+        <td>{{ g[4] }}</td>
+        <td>{{ g[1] }}</td>
+        <td>
+          <strong class="grade-value {% if g[2] >= 7 %}grade-pass{% elif g[2] >= 5 %}grade-warn{% else %}grade-fail{% endif %}">
+            {{ "%.1f"|format(g[2]) }}
+          </strong>
+        </td>
+        <td>{{ g[3] or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted">Nenhuma nota registrada para este aluno.</p>
+  {% endif %}
+</div>
+{% endblock %}

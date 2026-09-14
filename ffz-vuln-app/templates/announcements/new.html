@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Novo Aviso — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>📢 Novo Aviso</h2>
+  <a href="/avisos" class="btn btn-secondary">← Cancelar</a>
+</div>
+
+<div class="card form-card">
+  {# VULN V-02: body aceito sem sanitização — stored XSS #}
+  {# VULN V-05: Sem token CSRF #}
+  <form method="POST" action="/avisos/novo">
+    <div class="form-group">
+      <label>Título</label>
+      <input type="text" name="title" class="form-control" placeholder="Título do aviso" required>
+    </div>
+    <div class="form-group">
+      <label>Mensagem</label>
+      <textarea name="body" class="form-control" rows="6" placeholder="Texto do aviso (HTML é aceito)..." required></textarea>
+    </div>
+    <div class="form-group">
+      <label>Disciplina (deixe em branco para aviso geral)</label>
+      <select name="course_id" class="form-control">
+        <option value="">— Geral —</option>
+        {% for c in courses %}
+        <option value="{{ c[0] }}">{{ c[1] }} — {{ c[2] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Publicar Aviso</button>
+  </form>
+</div>
+{% endblock %}

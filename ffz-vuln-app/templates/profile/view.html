@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Perfil — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>👤 Perfil</h2>
+  {% if user[0] == session.get('user_id') %}
+  <a href="/perfil/editar" class="btn btn-primary">Editar Perfil</a>
+  {% endif %}
+</div>
+
+<div class="card detail-card profile-card">
+  <div class="profile-avatar">{{ (user[5] or user[1])[0] | upper }}</div>
+  <h3>{{ user[5] or user[1] }}</h3>
+  <span class="badge badge-role badge-{{ user[4] }}">{{ user[4] | capitalize }}</span>
+
+  <div class="detail-row">
+    <span class="detail-label">Usuário</span>
+    <span class="detail-value">{{ user[1] }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">E-mail</span>
+    <span class="detail-value">{{ user[2] }}</span>
+  </div>
+  {% if user[6] %}
+  <div class="detail-row">
+    <span class="detail-label">Matrícula</span>
+    <span class="detail-value">{{ user[6] }}</span>
+  </div>
+  {% endif %}
+  {% if user[4] == 'aluno' %}
+  <div class="detail-row">
+    <span class="detail-label">IRA</span>
+    <span class="detail-value">{{ "%.1f"|format(user[7]) }}</span>
+  </div>
+  {% endif %}
+  {% if user[8] %}
+  <div class="detail-row">
+    <span class="detail-label">Bio</span>
+    <span class="detail-value">{{ user[8] }}</span>
+  </div>
+  {% endif %}
+  <div class="detail-row">
+    <span class="detail-label">Membro desde</span>
+    <span class="detail-value">{{ user[10] }}</span>
+  </div>
+</div>
+
+{% if user[0] != session.get('user_id') %}
+<div class="card">
+  <a href="/mensagens/nova?para={{ user[1] }}" class="btn btn-secondary">✉️ Enviar mensagem</a>
+</div>
+{% endif %}
+{% endblock %}

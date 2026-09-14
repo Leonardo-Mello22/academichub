@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Disciplinas — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>📚 Disciplinas</h2>
+</div>
+
+<div class="search-bar">
+  {# VULN V-04: parâmetro 'busca' injetado na query SQL com UNION #}
+  <form method="GET" action="/disciplinas">
+    <input type="text" name="busca" placeholder="Buscar disciplina..." value="{{ busca }}" class="form-control search-input">
+    <button type="submit" class="btn btn-secondary">Buscar</button>
+  </form>
+</div>
+
+<div class="card">
+  {% if courses %}
+  <table class="table">
+    <thead>
+      <tr><th>Código</th><th>Nome</th><th>Descrição</th><th>Ações</th></tr>
+    </thead>
+    <tbody>
+      {% for c in courses %}
+      <tr>
+        <td><span class="course-code">{{ c[1] }}</span></td>
+        <td>{{ c[2] }}</td>
+        <td class="text-muted">{{ c[3] }}</td>
+        <td><a href="/disciplinas/{{ c[0] }}" class="btn btn-sm">Detalhes</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted">Nenhuma disciplina encontrada.</p>
+  {% endif %}
+</div>
+{% endblock %}

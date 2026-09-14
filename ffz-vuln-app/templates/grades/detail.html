@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Detalhe da Nota — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>📋 Detalhe da Nota</h2>
+  <a href="/notas" class="btn btn-secondary">← Voltar</a>
+</div>
+
+<div class="card detail-card">
+  <div class="detail-row">
+    <span class="detail-label">Aluno</span>
+    <span class="detail-value">{{ grade[9] }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Disciplina</span>
+    <span class="detail-value">{{ grade[8] }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Atividade</span>
+    <span class="detail-value">{{ grade[3] }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Nota</span>
+    <span class="detail-value grade-value {% if grade[4] >= 7 %}grade-pass{% elif grade[4] >= 5 %}grade-warn{% else %}grade-fail{% endif %}">
+      {{ "%.1f"|format(grade[4]) }}
+    </span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Comentário do professor</span>
+    <span class="detail-value">{{ grade[5] or '—' }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Data</span>
+    <span class="detail-value">{{ grade[7] }}</span>
+  </div>
+</div>
+{% endblock %}

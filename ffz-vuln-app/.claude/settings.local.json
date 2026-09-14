@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sv -b /tmp/jar_alice \"http://localhost:5000/painel?q=TESTMARKER\")",
+      "Bash(curl -s -c /tmp/jar_bob -b /tmp/jar_bob -L -X POST http://localhost:5000/login -d 'username=bob&password=qwerty' -o /dev/null)",
+      "Bash(curl -s -c /tmp/jar_bob -b /tmp/jar_bob -L -X POST http://localhost:5000/notas/lancar -d 'student_id=6&course_id=2&assignment_name=NotaFalsaBob&grade=10&feedback=bob_forged&professor_id=2' -o /dev/null)",
+      "Bash(python3 -)",
+      "Bash(curl -s -X POST http://localhost:5000/registro -d 'username=alice&email=new@test.com&password=abc&full_name=X')",
+      "Bash(curl -s -X POST http://localhost:5000/registro -H 'Content-Type: application/x-www-form-urlencoded' --data-urlencode username=alice --data-urlencode email=new@test.com --data-urlencode password=abc --data-urlencode full_name=X)",
+      "Bash(python3 -m py_compile app/database.py app/seed.py entrypoint.py app/routes/auth.py app/routes/grades.py app/routes/courses.py app/routes/profile.py app/routes/announcements.py app/routes/messages.py app/routes/files.py app/routes/admin.py)",
+      "Bash(sg docker:*)",
+      "Bash(python3 -m pip install PyMySQL -q --break-system-packages)",
+      "Bash(curl -s --max-time 2 http://127.0.0.1:31337/login)",
+      "Bash(python3 -m py_compile app/database.py app/seed.py entrypoint.py)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(pg_isready)",
+      "Bash(systemctl is-active:*)",
+      "Read(//var/run/**)",
+      "Bash(apt-cache show:*)",
+      "Bash(pg_lsclusters)",
+      "Read(//etc/**)",
+      "Bash(docker compose *)",
+      "Bash(docker --version)",
+      "Bash(docker-compose *)",
+      "Bash(sudo docker-compose *)",
+      "Bash(docker info *)",
+      "Read(//usr/lib/docker/**)",
+      "Read(//usr/local/lib/docker/**)",
+      "Bash(docker buildx *)"
+    ]
+  }
+}

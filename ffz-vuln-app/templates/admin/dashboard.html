@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Painel Admin — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>⚙️ Painel Administrativo</h2>
+</div>
+
+<div class="dashboard-grid">
+  <div class="card stat-card">
+    <div class="stat-number">{{ stats.users }}</div>
+    <div class="stat-label">Usuários</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ stats.courses }}</div>
+    <div class="stat-label">Disciplinas</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ stats.grades }}</div>
+    <div class="stat-label">Notas</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ stats.messages }}</div>
+    <div class="stat-label">Mensagens</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Ações Administrativas</h3>
+  <ul class="list-plain">
+    <li><a href="/admin/usuarios">👥 Gerenciar Usuários</a></li>
+    <li><a href="/avisos/novo">📢 Publicar Aviso</a></li>
+    <li><a href="/disciplinas">📚 Ver Disciplinas</a></li>
+  </ul>
+</div>
+{% endblock %}

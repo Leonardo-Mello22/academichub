@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Entrar — AcademicHub{% endblock %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+
+<div class="auth-wrapper">
+
+  <section class="auth-intro">
+
+    <div class="auth-brand">
+      <span class="auth-brand-mark">A</span>
+      <span>AcademicHub</span>
+    </div>
+
+    <div class="auth-intro-content">
+      <span class="auth-eyebrow">Portal Acadêmico</span>
+
+      <h1>
+        Sua vida acadêmica
+        <span>em um só lugar.</span>
+      </h1>
+
+      <p>
+        Acesse disciplinas, notas, avisos, mensagens e arquivos
+        através de uma única plataforma.
+      </p>
+    </div>
+
+    <p class="auth-intro-footer">
+      AcademicHub — Plataforma Acadêmica
+    </p>
+
+  </section>
+
+
+  <section class="auth-form-panel">
+
+    <div class="auth-form-container">
+
+      <div class="auth-heading">
+        <span class="auth-mobile-brand">AcademicHub</span>
+
+        <h2>Bem-vindo de volta</h2>
+
+        <p>
+          Entre com suas credenciais para acessar sua conta.
+        </p>
+      </div>
+
+
+      {% if error %}
+      <div class="alert alert-danger">
+        {{ error }}
+      </div>
+      {% endif %}
+
+
+      <form method="POST" action="/login">
+
+        <div class="form-group">
+
+          <label for="username">
+            Usuário
+          </label>
+
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="form-control auth-input"
+            placeholder="Digite seu usuário"
+            autocomplete="username"
+            required
+            autofocus
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <div class="form-label-row">
+
+            <label for="password">
+              Senha
+            </label>
+
+            <a href="/recuperar-senha">
+              Esqueceu a senha?
+            </a>
+
+          </div>
+
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control auth-input"
+            placeholder="Digite sua senha"
+            autocomplete="current-password"
+            required
+          >
+
+        </div>
+
+
+        <button
+          type="submit"
+          class="btn btn-primary btn-block auth-submit"
+        >
+          Entrar
+        </button>
+
+      </form>
+
+
+      <div class="auth-register">
+
+        <span>Ainda não possui uma conta?</span>
+
+        <a href="/registro">
+          Criar conta
+        </a>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+
+{% endblock %}
