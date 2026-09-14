@@ -175,6 +175,31 @@ def init_db():
                 )
             """)
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS security_logs (
+                    id SERIAL PRIMARY KEY,
+                    event_type VARCHAR(64) NOT NULL,
+                    severity VARCHAR(16) NOT NULL DEFAULT 'INFO',
+                    user_id INT,
+                    username VARCHAR(64),
+                    ip_address VARCHAR(64),
+                    user_agent TEXT,
+                    message TEXT NOT NULL,
+                    details TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_security_logs_created_at
+                ON security_logs (created_at DESC)
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_security_logs_event_type
+                ON security_logs (event_type)
+            """)
+
     finally:
         conn.close()
 

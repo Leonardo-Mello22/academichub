@@ -13,7 +13,7 @@
   <form method="POST" action="/mensagens/nova">
     <div class="form-group">
       <label>Para (usuário)</label>
-      <select name="recipient" class="form-control" required>
+      <select name="recipient" class="form-control form-select" required>
         <option value="">— Selecione —</option>
         {% for u in users %}
         <option value="{{ u[0] }}" {% if u[0] == para %}selected{% endif %}>{{ u[1] or u[0] }} (@{{ u[0] }})</option>

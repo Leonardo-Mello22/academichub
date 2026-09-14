@@ -1,57 +1,61 @@
 {% extends "base.html" %}
-{% block title %}Lançar Nota — AcademiPortal{% endblock %}
+{% block title %}Lançar Nota — AcademicHub{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h2>✏️ Lançar Nota</h2>
-  <a href="/notas" class="btn btn-secondary">← Voltar</a>
-</div>
+<div class="form-page">
+  <div class="page-header">
+    <h2>Lançar Nota</h2>
+    <a href="/notas" class="btn btn-secondary">← Voltar</a>
+  </div>
 
-<div class="card form-card">
-  {# VULN V-05: Sem token CSRF neste formulário #}
-  <form method="POST" action="/notas/lancar">
-    <div class="form-group">
-      <label>Aluno</label>
-      <select name="student_id" class="form-control" required>
-        <option value="">— Selecione —</option>
-        {% for s in students %}
-        <option value="{{ s[0] }}">{{ s[1] }} ({{ s[2] }})</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Disciplina</label>
-      <select name="course_id" class="form-control" required>
-        <option value="">— Selecione —</option>
-        {% for c in courses %}
-        <option value="{{ c[0] }}">{{ c[1] }} — {{ c[2] }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Atividade / Avaliação</label>
-      <input type="text" name="assignment_name" class="form-control" placeholder="ex: Prova 1, Trabalho Final" required>
-    </div>
-    <div class="form-group">
-      <label>Nota (0–10)</label>
-      <input type="number" name="grade" step="0.1" min="0" max="10" class="form-control" required>
-    </div>
-    <div class="form-group">
-      <label>Comentário (opcional)</label>
-      <textarea name="feedback" class="form-control" rows="3" placeholder="Observações para o aluno..."></textarea>
-    </div>
+  <div class="card form-card">
+    {# VULN V-05: Sem token CSRF neste formulário #}
+    <form method="POST" action="/notas/lancar">
+      <div class="form-group">
+        <label>Aluno</label>
+        <select name="student_id" class="form-control form-select" required>
+          <option value="">— Selecione —</option>
+          {% for s in students %}
+          <option value="{{ s[0] }}">{{ s[1] }} ({{ s[2] }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Disciplina</label>
+        <select name="course_id" class="form-control form-select" required>
+          <option value="">— Selecione —</option>
+          {% for c in courses %}
+          <option value="{{ c[0] }}">{{ c[1] }} — {{ c[2] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Atividade / Avaliação</label>
+          <input type="text" name="assignment_name" class="form-control" placeholder="ex: Prova 1, Trabalho Final" required>
+        </div>
+        <div class="form-group">
+          <label>Nota (0–10)</label>
+          <input type="number" name="grade" step="0.1" min="0" max="10" class="form-control" placeholder="0.0" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Comentário (opcional)</label>
+        <textarea name="feedback" class="form-control" rows="3" placeholder="Observações para o aluno..."></textarea>
+      </div>
 
-    {# VULN V-10: professor_id controlado pelo cliente #}
-    <div class="form-group">
-      <label>Lançado por (Professor)</label>
-      <select name="professor_id" class="form-control">
-        {% for p in professors %}
-        <option value="{{ p[0] }}" {% if p[0] == session.get('user_id') %}selected{% endif %}>{{ p[1] }}</option>
-        {% endfor %}
-      </select>
-    </div>
+      {# VULN V-10: professor_id controlado pelo cliente #}
+      <div class="form-group">
+        <label>Lançado por (Professor)</label>
+        <select name="professor_id" class="form-control form-select">
+          {% for p in professors %}
+          <option value="{{ p[0] }}" {% if p[0] == session.get('user_id') %}selected{% endif %}>{{ p[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <button type="submit" class="btn btn-primary btn-block">Lançar Nota</button>
-  </form>
+      <button type="submit" class="btn btn-primary btn-block">Lançar Nota</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

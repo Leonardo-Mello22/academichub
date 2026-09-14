@@ -11,8 +11,10 @@
 
 <div class="search-bar">
   <form method="GET" action="/notas">
-    <input type="text" name="filtro" placeholder="Filtrar por atividade..." value="{{ filtro }}" class="form-control search-input">
-    <button type="submit" class="btn btn-secondary">Filtrar</button>
+    <div class="search-field">
+      <input type="search" name="filtro" placeholder="Filtrar por atividade..." value="{{ filtro }}" class="form-control search-input">
+    </div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
   </form>
 </div>
 
@@ -46,7 +48,7 @@
             {{ "%.1f"|format(g[2]) }}
           </strong>
         </td>
-        <td><a href="/notas/{{ g[0] }}" class="btn btn-sm">Ver</a></td>
+        <td><a href="/notas/{{ g[0] }}" class="btn btn-sm btn-primary">Ver</a></td>
       </tr>
       {% endfor %}
     </tbody>

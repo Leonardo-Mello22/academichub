@@ -9,8 +9,10 @@
 <div class="search-bar">
   {# VULN V-04: parâmetro 'busca' injetado na query SQL com UNION #}
   <form method="GET" action="/disciplinas">
-    <input type="text" name="busca" placeholder="Buscar disciplina..." value="{{ busca }}" class="form-control search-input">
-    <button type="submit" class="btn btn-secondary">Buscar</button>
+    <div class="search-field">
+      <input type="search" name="busca" placeholder="Buscar disciplina..." value="{{ busca }}" class="form-control search-input">
+    </div>
+    <button type="submit" class="btn btn-primary">Buscar</button>
   </form>
 </div>
 
@@ -26,7 +28,7 @@
         <td><span class="course-code">{{ c[1] }}</span></td>
         <td>{{ c[2] }}</td>
         <td class="text-muted">{{ c[3] }}</td>
-        <td><a href="/disciplinas/{{ c[0] }}" class="btn btn-sm">Detalhes</a></td>
+        <td><a href="/disciplinas/{{ c[0] }}" class="btn btn-sm btn-primary">Detalhes</a></td>
       </tr>
       {% endfor %}
     </tbody>

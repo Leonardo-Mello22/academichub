@@ -1,5 +1,6 @@
 from flask import Blueprint, request, session, redirect, render_template, url_for, abort
 from app.database import unsafe_query, execute_db
+from app.security_log import log_security_event
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -45,6 +46,13 @@ def edit_profile():
             "UPDATE users SET full_name=%s, bio=%s, role=%s WHERE id=%s",
             (full_name, bio, role, user_id)
         )
+        if role != user[4]:
+            log_security_event(
+                'ROLE_CHANGE',
+                f'Usuário {session.get("username")} alterou próprio papel: {user[4]} -> {role}',
+                severity='HIGH',
+                details=f'via=profile_edit; old={user[4]}; new={role}',
+            )
         session['role'] = role
         session['full_name'] = full_name
         return redirect(url_for('profile.view_profile', user_id=user_id))

@@ -1,31 +1,104 @@
 {% extends "base.html" %}
-{% block title %}Painel — AcademiPortal{% endblock %}
+{% block title %}Painel — AcademicHub{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h2>Bem-vindo(a), {{ session.get('full_name') or session.get('username') }}!</h2>
+{% if not search_query %}
+<div class="dashboard-hero">
+  <div>
+    <h2>Olá, {{ session.get('full_name') or session.get('username') }}</h2>
+    <p>Resumo da sua vida acadêmica neste semestre.</p>
+  </div>
   <span class="badge badge-role badge-{{ role }}">{{ role | capitalize }}</span>
 </div>
-
-<div class="search-bar">
-  <form method="GET" action="/painel">
-    <input type="text" name="q" placeholder="Buscar aluno, disciplina ou nota..." value="{{ search_query }}" class="form-control search-input">
-    <button type="submit" class="btn btn-secondary">Buscar</button>
-  </form>
-</div>
+{% endif %}
 
 {% if search_query %}
 <div class="search-results card">
   <h4>Resultados para: {{ search_query | safe }}</h4>
   {# VULN V-01: | safe desativa o escape automático do Jinja2 #}
+
+  {% set has_results = search_students or search_courses or search_grades %}
+
+  {% if not has_results %}
   <p class="text-muted">Nenhum resultado encontrado para a busca acima.</p>
+  {% endif %}
+
+  {% if search_students %}
+  <h3>Alunos</h3>
+  <table class="table">
+    <thead>
+      <tr><th>Nome</th><th>Matrícula</th><th>Usuário</th><th>IRA</th><th>Ações</th></tr>
+    </thead>
+    <tbody>
+      {% for s in search_students %}
+      <tr>
+        <td><a href="/perfil/{{ s[0] }}">{{ s[1] }}</a></td>
+        <td>{{ s[2] or '—' }}</td>
+        <td>@{{ s[4] }}</td>
+        <td>{{ "%.1f"|format(s[3]) if s[3] is not none else '—' }}</td>
+        <td>
+          <div class="header-actions">
+            <a href="/notas/aluno/{{ s[0] }}" class="btn btn-sm btn-primary">Ver notas</a>
+            <a href="/mensagens/nova?para={{ s[4] }}" class="btn btn-sm btn-ghost">Mensagem</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if search_courses %}
+  <h3>Disciplinas</h3>
+  <table class="table">
+    <thead>
+      <tr><th>Código</th><th>Nome</th><th>Descrição</th><th>Ações</th></tr>
+    </thead>
+    <tbody>
+      {% for c in search_courses %}
+      <tr>
+        <td><span class="course-code">{{ c[1] }}</span></td>
+        <td>{{ c[2] }}</td>
+        <td class="text-muted">{{ c[3] }}</td>
+        <td><a href="/disciplinas/{{ c[0] }}" class="btn btn-sm btn-primary">Detalhes</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if search_grades %}
+  <h3>Notas / Atividades</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        {% if role in ('professor', 'admin') %}<th>Aluno</th>{% endif %}
+        <th>Atividade</th>
+        <th>Disciplina</th>
+        <th>Nota</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in search_grades %}
+      <tr>
+        {% if role in ('professor', 'admin') %}<td>{{ g[5] }}</td>{% endif %}
+        <td>{{ g[1] }}</td>
+        <td><span class="course-code">{{ g[4] }}</span> {{ g[3] }}</td>
+        <td><strong>{{ "%.1f"|format(g[2]) }}</strong></td>
+        <td><a href="/notas/{{ g[0] }}" class="btn btn-sm btn-primary">Ver</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
 </div>
-{% endif %}
+{% else %}
 
 {% if role == 'aluno' %}
 <div class="dashboard-grid">
   <div class="card">
-    <h3>📊 Últimas Notas</h3>
+    <h3>Últimas Notas</h3>
     {% if recent_grades %}
     <table class="table">
       <thead>
@@ -41,14 +114,17 @@
         {% endfor %}
       </tbody>
     </table>
-    <a href="/notas" class="btn btn-sm">Ver todas as notas</a>
+    <div class="card-actions">
+      <a href="/notas" class="btn btn-sm btn-primary">Ver todas as notas</a>
+      <a href="/assistente" class="btn btn-sm btn-ghost">Abrir Assistente IA</a>
+    </div>
     {% else %}
     <p class="text-muted">Nenhuma nota lançada ainda.</p>
     {% endif %}
   </div>
 
   <div class="card">
-    <h3>📚 Minhas Disciplinas</h3>
+    <h3>Minhas Disciplinas</h3>
     {% if enrolled_courses %}
     <ul class="list-plain">
       {% for c in enrolled_courses %}
@@ -57,7 +133,10 @@
       </li>
       {% endfor %}
     </ul>
-    <a href="/disciplinas" class="btn btn-sm">Ver todas as disciplinas</a>
+    <div class="card-actions">
+      <a href="/disciplinas" class="btn btn-sm btn-primary">Ver disciplinas</a>
+      <a href="/arquivos" class="btn btn-sm btn-secondary">Arquivos</a>
+    </div>
     {% else %}
     <p class="text-muted">Nenhuma matrícula registrada.</p>
     {% endif %}
@@ -66,7 +145,7 @@
 
 {% elif role in ('professor', 'admin') %}
 <div class="card">
-  <h3>👨‍🎓 Alunos Matriculados</h3>
+  <h3>Alunos Matriculados</h3>
   {% if all_students %}
   <table class="table">
     <thead>
@@ -78,7 +157,12 @@
         <td><a href="/perfil/{{ s[0] }}">{{ s[1] }}</a></td>
         <td>{{ s[2] }}</td>
         <td>{{ "%.1f"|format(s[3]) }}</td>
-        <td><a href="/notas/aluno/{{ s[0] }}" class="btn btn-sm">Ver notas</a></td>
+        <td>
+          <div class="header-actions">
+            <a href="/notas/aluno/{{ s[0] }}" class="btn btn-sm btn-primary">Ver notas</a>
+            <a href="/mensagens/nova?para={{ s[4] }}" class="btn btn-sm btn-ghost">Mensagem</a>
+          </div>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -86,6 +170,12 @@
   {% else %}
   <p class="text-muted">Nenhum aluno encontrado.</p>
   {% endif %}
+  <div class="card-actions">
+    <a href="/notas/lancar" class="btn btn-accent">Lançar nota</a>
+    <a href="/avisos" class="btn btn-secondary">Ver avisos</a>
+  </div>
 </div>
+{% endif %}
+
 {% endif %}
 {% endblock %}

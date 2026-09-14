@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Logs de Segurança — AcademicHub{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Logs de Segurança</h2>
+  <a href="/admin" class="btn btn-secondary">← Admin</a>
+</div>
+
+<div class="search-bar">
+  <form method="GET" action="/admin/logs">
+    <div class="search-field">
+      <input
+        type="search"
+        name="event_type"
+        class="form-control search-input"
+        placeholder="Filtrar por evento (ex: LOGIN_FAILURE)"
+        value="{{ event_type }}"
+      >
+    </div>
+    <select name="severity" class="form-control form-select" style="max-width:180px;min-height:48px;">
+      <option value="">Todas severidades</option>
+      <option value="INFO" {% if severity == 'INFO' %}selected{% endif %}>INFO</option>
+      <option value="WARNING" {% if severity == 'WARNING' %}selected{% endif %}>WARNING</option>
+      <option value="HIGH" {% if severity == 'HIGH' %}selected{% endif %}>HIGH</option>
+      <option value="ERROR" {% if severity == 'ERROR' %}selected{% endif %}>ERROR</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+  </form>
+</div>
+
+<div class="card">
+  {% if logs %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Quando</th>
+        <th>Severidade</th>
+        <th>Evento</th>
+        <th>Usuário</th>
+        <th>IP</th>
+        <th>Mensagem</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td>{{ log[1] }}</td>
+        <td>
+          <span class="badge {% if log[3] == 'HIGH' or log[3] == 'ERROR' %}badge-admin{% elif log[3] == 'WARNING' %}badge-professor{% else %}badge-global{% endif %}">
+            {{ log[3] }}
+          </span>
+        </td>
+        <td><code>{{ log[2] }}</code></td>
+        <td>{{ log[5] or '—' }}{% if log[4] %} <span class="text-muted">#{{ log[4] }}</span>{% endif %}</td>
+        <td>{{ log[6] or '—' }}</td>
+        <td>
+          {{ log[7] }}
+          {% if log[8] %}
+          <br><small class="text-muted">{{ log[8] }}</small>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted">Nenhum evento de segurança registrado ainda.</p>
+  {% endif %}
+</div>
+{% endblock %}

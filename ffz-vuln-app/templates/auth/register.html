@@ -1,41 +1,129 @@
 {% extends "base.html" %}
-{% block title %}Criar Conta — AcademiPortal{% endblock %}
+
+{% block title %}Criar Conta — AcademicHub{% endblock %}
+
 {% block body_class %}auth-page{% endblock %}
 
 {% block content %}
-<div class="auth-card">
-  <div class="auth-logo">
-    <span class="logo-icon">🎓</span>
-    <h1>AcademiPortal</h1>
-    <p class="auth-subtitle">Criar nova conta</p>
-  </div>
 
-  {% if error %}
-  <div class="alert alert-danger">{{ error }}</div>
-  {% endif %}
+<div class="auth-wrapper">
 
-  <form method="POST" action="/registro">
-    <div class="form-group">
-      <label for="full_name">Nome completo</label>
-      <input type="text" id="full_name" name="full_name" class="form-control" placeholder="ex: Maria Souza" required>
-    </div>
-    <div class="form-group">
-      <label for="username">Usuário</label>
-      <input type="text" id="username" name="username" class="form-control" placeholder="ex: maria.souza" required>
-    </div>
-    <div class="form-group">
-      <label for="email">E-mail institucional</label>
-      <input type="email" id="email" name="email" class="form-control" placeholder="ex: maria@aluno.academiportal.edu.br" required>
-    </div>
-    <div class="form-group">
-      <label for="password">Senha</label>
-      <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
-    </div>
-    <button type="submit" class="btn btn-primary btn-block">Criar Conta</button>
-  </form>
+  <section class="auth-intro">
 
-  <div class="auth-links">
-    <a href="/login">Já tenho conta</a>
-  </div>
+    <div class="auth-brand">
+      <span class="auth-brand-mark">A</span>
+      <span>AcademicHub</span>
+    </div>
+
+    <div class="auth-intro-content">
+      <span class="auth-eyebrow">Comece agora</span>
+
+      <h1>
+        Crie sua conta
+        <span>em poucos minutos.</span>
+      </h1>
+
+      <p>
+        Cadastre-se para acompanhar disciplinas, notas, avisos e
+        mensagens em um único portal.
+      </p>
+    </div>
+
+    <p class="auth-intro-footer">
+      AcademicHub — Plataforma Acadêmica
+    </p>
+
+  </section>
+
+
+  <section class="auth-form-panel">
+
+    <div class="auth-form-container">
+
+      <div class="auth-heading">
+        <span class="auth-mobile-brand">AcademicHub</span>
+
+        <h2>Criar conta</h2>
+
+        <p>
+          Preencha seus dados institucionais para liberar o acesso.
+        </p>
+      </div>
+
+
+      {% if error %}
+      <div class="alert alert-danger">
+        {{ error }}
+      </div>
+      {% endif %}
+
+
+      <form method="POST" action="/registro">
+
+        <div class="form-group">
+          <label for="full_name">Nome completo</label>
+          <input
+            type="text"
+            id="full_name"
+            name="full_name"
+            class="form-control auth-input"
+            placeholder="ex: Maria Souza"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="form-control auth-input"
+            placeholder="ex: maria.souza"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="email">E-mail institucional</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="form-control auth-input"
+            placeholder="ex: maria@academichub.edu.br"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control auth-input"
+            placeholder="••••••••"
+            required
+          >
+        </div>
+
+        <div class="auth-actions">
+          <button type="submit" class="btn btn-primary btn-block auth-submit">
+            Criar minha conta
+          </button>
+
+          <a href="/login" class="btn btn-ghost btn-block">
+            Já tenho conta
+          </a>
+        </div>
+
+      </form>
+
+    </div>
+
+  </section>
+
 </div>
+
 {% endblock %}

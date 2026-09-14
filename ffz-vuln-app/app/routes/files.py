@@ -127,6 +127,14 @@ def upload_file():
         )
     )
 
+    from app.security_log import log_security_event
+    log_security_event(
+        'FILE_UPLOAD',
+        f'Upload de arquivo: {original_name}',
+        severity='INFO',
+        details=f'saved_as={save_name}; course_id={course_id}',
+    )
+
     return redirect(
         url_for('files.list_files')
     )
@@ -142,6 +150,7 @@ def download_file(filename):
 
     from flask import Response
     import mimetypes
+    from app.security_log import log_security_event
 
     filepath = os.path.normpath(
         os.path.join(
@@ -154,19 +163,19 @@ def download_file(filename):
         with open(filepath, 'rb') as f:
             data = f.read()
 
-        mime, _ = mimetypes.guess_type(
-            filepath
-        )
+        mime, _ = mimetypes.guess_type(filepath)
+        mime = mime or 'application/octet-stream'
 
-        mime = (
-            mime
-            or 'application/octet-stream'
-        )
+        # Alerta se houver tentativa de path traversal
+        if '..' in filename or filename.startswith('/'):
+            log_security_event(
+                'FILE_DOWNLOAD_SUSPICIOUS',
+                f'Download com path suspeito: {filename}',
+                severity='HIGH',
+                details=f'resolved={filepath}',
+            )
 
-        return Response(
-            data,
-            mimetype=mime
-        )
+        return Response(data, mimetype=mime)
 
     except FileNotFoundError:
         abort(404)

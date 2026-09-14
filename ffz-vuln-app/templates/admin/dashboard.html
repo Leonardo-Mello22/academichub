@@ -23,14 +23,23 @@
     <div class="stat-number">{{ stats.messages }}</div>
     <div class="stat-label">Mensagens</div>
   </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ sec.today }}</div>
+    <div class="stat-label">Eventos hoje</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ sec.login_failures }}</div>
+    <div class="stat-label">Falhas de login</div>
+  </div>
 </div>
 
 <div class="card">
   <h3>Ações Administrativas</h3>
   <ul class="list-plain">
-    <li><a href="/admin/usuarios">👥 Gerenciar Usuários</a></li>
-    <li><a href="/avisos/novo">📢 Publicar Aviso</a></li>
-    <li><a href="/disciplinas">📚 Ver Disciplinas</a></li>
+    <li><a href="/admin/usuarios">Gerenciar Usuários</a></li>
+    <li><a href="/admin/logs">Logs de Segurança</a></li>
+    <li><a href="/avisos/novo">Publicar Aviso</a></li>
+    <li><a href="/disciplinas">Ver Disciplinas</a></li>
   </ul>
 </div>
 {% endblock %}

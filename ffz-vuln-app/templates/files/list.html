@@ -13,12 +13,12 @@
   <form method="POST" action="/arquivos/upload" enctype="multipart/form-data">
     <div class="form-group">
       <label>Arquivo</label>
-      <input type="file" name="file" class="form-control" required>
-      <small class="text-muted">Formatos aceitos: qualquer arquivo (PDF, DOC, etc.)</small>
+      <input type="file" name="file" class="form-control form-file" required>
+      <small class="form-hint">Formatos aceitos: qualquer arquivo (PDF, DOC, etc.)</small>
     </div>
     <div class="form-group">
       <label>Disciplina (opcional)</label>
-      <select name="course_id" class="form-control">
+      <select name="course_id" class="form-control form-select">
         <option value="">— Nenhuma —</option>
         {% for c in courses %}
         <option value="{{ c[0] }}">{{ c[1] }} — {{ c[2] }}</option>
@@ -44,7 +44,7 @@
         <td>{{ f[4] }}</td>
         <td>{{ f[3] }}</td>
         {# VULN V-08: Download sem autenticação; path traversal possível #}
-        <td><a href="/arquivos/baixar/{{ f[2] }}" class="btn btn-sm">Baixar</a></td>
+        <td><a href="/arquivos/baixar/{{ f[2] }}" class="btn btn-sm btn-primary">Baixar</a></td>
       </tr>
       {% endfor %}
     </tbody>

@@ -94,6 +94,16 @@ def submit_grade():
             "VALUES (%s, %s, %s, %s, %s, %s)",
             (student_id, course_id, assignment_name, grade, feedback, professor_id)
         )
+        from app.security_log import log_security_event
+        log_security_event(
+            'GRADE_SUBMIT',
+            f'Nota lançada: {assignment_name} = {grade}',
+            severity='INFO',
+            details=(
+                f'student_id={student_id}; course_id={course_id}; '
+                f'submitted_by={professor_id}; session_user={session.get("user_id")}'
+            ),
+        )
         return redirect(url_for('grades.list_grades'))
 
     students = query_db("SELECT id, full_name, student_id FROM users WHERE role='aluno' ORDER BY full_name")

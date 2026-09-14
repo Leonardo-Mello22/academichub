@@ -21,7 +21,7 @@
     </div>
     <div class="form-group">
       <label>Disciplina (deixe em branco para aviso geral)</label>
-      <select name="course_id" class="form-control">
+      <select name="course_id" class="form-control form-select">
         <option value="">— Geral —</option>
         {% for c in courses %}
         <option value="{{ c[0] }}">{{ c[1] }} — {{ c[2] }}</option>

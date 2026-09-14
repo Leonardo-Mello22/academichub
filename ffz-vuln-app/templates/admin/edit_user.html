@@ -11,15 +11,16 @@
   <form method="POST" action="/admin/usuarios/{{ user[0] }}/editar">
     <div class="form-group">
       <label>Papel (Role)</label>
-      <select name="role" class="form-control">
+      <select name="role" class="form-control form-select">
         <option value="aluno" {% if user[4] == 'aluno' %}selected{% endif %}>Aluno</option>
         <option value="professor" {% if user[4] == 'professor' %}selected{% endif %}>Professor</option>
         <option value="admin" {% if user[4] == 'admin' %}selected{% endif %}>Admin</option>
       </select>
     </div>
     <div class="form-group">
-      <label>
-        <input type="checkbox" name="is_active" {% if user[7] %}checked{% endif %}> Conta ativa
+      <label class="form-check">
+        <input type="checkbox" name="is_active" {% if user[7] %}checked{% endif %}>
+        Conta ativa
       </label>
     </div>
     <div class="form-group">
