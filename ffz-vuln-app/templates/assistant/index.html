@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}
+Assistente Acadêmico — AcademicHub
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h2>Assistente Acadêmico</h2>
+
+    <p class="text-muted">
+      Consulte informações sobre seu desempenho
+      acadêmico utilizando Inteligência Artificial.
+    </p>
+  </div>
+</div>
+
+
+<div class="assistant-layout">
+
+  <div class="card assistant-card">
+
+    <div class="assistant-header">
+      <div class="assistant-icon">
+        AI
+      </div>
+
+      <div>
+        <h3>AcademicHub AI</h3>
+
+        <p class="text-muted">
+          Posso analisar suas disciplinas e notas
+          para ajudar você a compreender seu
+          desempenho.
+        </p>
+      </div>
+    </div>
+
+
+    {% if error %}
+    <div class="alert alert-danger">
+      {{ error }}
+    </div>
+    {% endif %}
+
+
+    {% if answer %}
+    <div class="assistant-response">
+
+      <div class="assistant-response-label">
+        Resposta
+      </div>
+
+      <div class="assistant-response-content">
+        {{ answer }}
+      </div>
+
+    </div>
+    {% endif %}
+
+
+    <form
+      method="POST"
+      action="/assistente"
+      class="assistant-form"
+    >
+
+      <label for="question">
+        O que você gostaria de saber?
+      </label>
+
+      <textarea
+        id="question"
+        name="question"
+        class="form-control"
+        rows="4"
+        maxlength="1000"
+        placeholder="Ex.: Como está meu desempenho nas disciplinas?"
+        required
+      >{{ question }}</textarea>
+
+      <div class="assistant-actions">
+
+        <span class="text-muted assistant-hint">
+          A IA pode cometer erros. Confira informações
+          importantes diretamente no portal.
+        </span>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Perguntar
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+
+  <div class="card assistant-examples">
+
+    <h3>Exemplos de perguntas</h3>
+
+    <ul class="list-plain">
+      <li>
+        Como está meu desempenho geral?
+      </li>
+
+      <li>
+        Em quais disciplinas preciso prestar
+        mais atenção?
+      </li>
+
+      <li>
+        Resuma minhas notas mais recentes.
+      </li>
+
+      <li>
+        Qual disciplina possui minha menor nota?
+      </li>
+
+      <li>
+        Sugira como organizar meus estudos
+        com base nas minhas notas.
+      </li>
+    </ul>
+
+  </div>
+
+</div>
+
+{% endblock %}

@@ -2,66 +2,145 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>{% block title %}AcademicHub{% endblock %}</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-  <link rel="stylesheet" href="/static/css/style.css">
+  <title>
+    {% block title %}AcademicHub{% endblock %}
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/style.css') }}"
+  >
 </head>
 
 <body class="{% block body_class %}{% endblock %}">
 
-{% if session.get('user_id') %}
-<nav class="navbar">
-  <div class="nav-brand">
-    <a href="/painel">
-      <span class="brand-mark">A</span>
-      <span>AcademicHub</span>
-    </a>
-  </div>
+  {% if session.get('user_id') %}
 
-  <ul class="nav-links">
-    <li><a href="/painel">Painel</a></li>
-    <li><a href="/notas">Notas</a></li>
-    <li><a href="/disciplinas">Disciplinas</a></li>
-    <li><a href="/avisos">Avisos</a></li>
-    <li><a href="/mensagens">Mensagens</a></li>
-    <li><a href="/arquivos">Arquivos</a></li>
+  <nav class="navbar">
 
-    {% if session.get('role') == 'professor' or session.get('role') == 'admin' %}
-    <li>
-      <a href="/notas/lancar">Lançar Nota</a>
-    </li>
-    {% endif %}
+    <div class="nav-brand">
+      <a href="/painel">
+        <span class="brand-mark">A</span>
+        <span>AcademicHub</span>
+      </a>
+    </div>
 
-    {% if session.get('role') == 'admin' %}
-    <li>
-      <a href="/admin" class="nav-admin">Admin</a>
-    </li>
-    {% endif %}
-  </ul>
+    <ul class="nav-links">
 
-  <div class="nav-user">
-    <a href="/perfil/{{ session.get('user_id') }}">
-      {{ session.get('username') }}
-    </a>
+      <li>
+        <a href="/painel">
+          Painel
+        </a>
+      </li>
 
-    <span class="nav-divider"></span>
+      <li>
+        <a href="/notas">
+          Notas
+        </a>
+      </li>
 
-    <a href="/logout">Sair</a>
-  </div>
-</nav>
-{% endif %}
+      <li>
+        <a href="/disciplinas">
+          Disciplinas
+        </a>
+      </li>
 
-<main class="container">
-  {% block content %}{% endblock %}
-</main>
+      <li>
+        <a href="/avisos">
+          Avisos
+        </a>
+      </li>
 
-<footer class="footer">
-  <p>AcademicHub — Plataforma Acadêmica</p>
-</footer>
+      <li>
+        <a href="/mensagens">
+          Mensagens
+        </a>
+      </li>
 
-<script src="/static/js/app.js"></script>
+      <li>
+        <a href="/arquivos">
+          Arquivos
+        </a>
+      </li>
+
+      {% if session.get('role') == 'aluno' %}
+      <li>
+        <a href="/assistente">
+          Assistente IA
+        </a>
+      </li>
+      {% endif %}
+
+      {% if session.get('role') == 'professor'
+            or session.get('role') == 'admin' %}
+      <li>
+        <a href="/notas/lancar">
+          Lançar Nota
+        </a>
+      </li>
+      {% endif %}
+
+      {% if session.get('role') == 'admin' %}
+      <li>
+        <a
+          href="/admin"
+          class="nav-admin"
+        >
+          Admin
+        </a>
+      </li>
+      {% endif %}
+
+    </ul>
+
+    <div class="nav-user">
+
+      <a
+        href="/perfil/{{ session.get('user_id') }}"
+      >
+        {{ session.get('username') }}
+      </a>
+
+      <span class="nav-divider"></span>
+
+      <a href="/logout">
+        Sair
+      </a>
+
+    </div>
+
+  </nav>
+
+  {% endif %}
+
+
+  <main class="container">
+
+    {% block content %}
+    {% endblock %}
+
+  </main>
+
+
+  <footer class="footer">
+    <p>
+      AcademicHub — Plataforma Acadêmica
+    </p>
+  </footer>
+
+
+  <script
+    src="{{ url_for('static', filename='js/app.js') }}"
+  ></script>
+
+  {% block scripts %}
+  {% endblock %}
 
 </body>
 </html>

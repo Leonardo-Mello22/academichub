@@ -15,6 +15,7 @@ services:
       - PG_USER=academichub
       - PG_PASSWORD=academichub123
       - PG_DATABASE=academichub
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     restart: unless-stopped
 
   db:
