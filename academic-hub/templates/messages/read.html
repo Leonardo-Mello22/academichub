@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Mensagem — AcademiPortal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>✉️ {{ msg[3] }}</h2>
+  <a href="/mensagens" class="btn btn-secondary">← Caixa de entrada</a>
+</div>
+
+<div class="card detail-card">
+  <div class="detail-row">
+    <span class="detail-label">De</span>
+    <span class="detail-value">{{ msg[7] or msg[8] }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Assunto</span>
+    <span class="detail-value">{{ msg[3] }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Data</span>
+    <span class="detail-value">{{ msg[6] }}</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="message-body">{{ msg[4] | safe }}</div>
+</div>
+
+<div class="card">
+  <a href="/mensagens/nova?para={{ msg[8] }}" class="btn btn-secondary">Responder</a>
+</div>
+{% endblock %}
