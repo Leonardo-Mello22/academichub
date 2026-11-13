@@ -1,10 +1,5 @@
-import hashlib
-
 from app.database import get_db
-
-
-def md5(s):
-    return hashlib.md5(s.encode()).hexdigest()
+from app.stego import build_credentials
 
 
 def seed_db():
@@ -20,7 +15,7 @@ def seed_db():
                     1,
                     'admin',
                     'admin@academichub.edu.br',
-                    md5('admin123'),
+                    'admin123',
                     'admin',
                     'Administrador do Sistema',
                     None,
@@ -31,7 +26,7 @@ def seed_db():
                     2,
                     'prof.renatta',
                     'renatta@academichub.edu.br',
-                    md5('criptografia1'),
+                    'criptografia1',
                     'professor',
                     'Prof. Dr. Renatta Nigro',
                     None,
@@ -42,7 +37,7 @@ def seed_db():
                     3,
                     'prof.gaby',
                     'gaby@academichub.edu.br',
-                    md5('iloveteaching'),
+                    'iloveteaching',
                     'professor',
                     'Profa. Gaby',
                     None,
@@ -53,7 +48,7 @@ def seed_db():
                     4,
                     'guilherme',
                     'guilherme@aluno.academichub.edu.br',
-                    md5('senha123'),
+                    'senha123',
                     'aluno',
                     'Guilherme Alves',
                     'A2024001',
@@ -64,7 +59,7 @@ def seed_db():
                     5,
                     'matheus',
                     'matheus@aluno.academichub.edu.br',
-                    md5('cesarschool'),
+                    'cesarschool',
                     'aluno',
                     'Matheus Cunha',
                     'A2024002',
@@ -75,7 +70,7 @@ def seed_db():
                     6,
                     'João',
                     'joao@aluno.academichub.edu.br',
-                    md5('joao123'),
+                    'joao123',
                     'aluno',
                     'João da Silva',
                     'A2024003',
@@ -85,6 +80,9 @@ def seed_db():
             ]
 
             for user in users:
+                # password -> honeypot (MD5 de senha falsa)
+                # ps_images -> PNG com hash Argon2id escondido
+                honeypot, image = build_credentials(user[3])
                 cur.execute(
                     """
                     INSERT INTO users (
@@ -96,12 +94,13 @@ def seed_db():
                         full_name,
                         student_id,
                         gpa,
-                        bio
+                        bio,
+                        ps_images
                     )
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT DO NOTHING
                     """,
-                    user
+                    (*user[:3], honeypot, *user[4:], image)
                 )
 
             cur.execute(

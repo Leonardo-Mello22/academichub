@@ -1,5 +1,3 @@
-import hashlib
-
 from flask import (
     Blueprint,
     request,
@@ -13,15 +11,15 @@ from app.database import (
     execute_db,
     query_db,
 )
+from app.security_log import log_security_event
+from app.stego import (
+    build_credentials,
+    md5,
+    verify_password_image,
+)
 
 
 auth_bp = Blueprint('auth', __name__)
-
-
-def md5(s):
-    return hashlib.md5(
-        s.encode()
-    ).hexdigest()
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -39,46 +37,75 @@ def login():
             ''
         )
 
-        # V-03 corrigida:
-        # consulta parametrizada impede que a entrada
-        # do usuário altere a estrutura do SQL.
+        # V-03 corrigida: consulta parametrizada.
+        # A senha real NÃO está mais na coluna password: o hash
+        # Argon2id fica escondido na imagem ps_images (esteganografia).
         user = query_db(
             """
-            SELECT *
+            SELECT id, username, password, role,
+                   full_name, ps_images
             FROM users
             WHERE username = %s
-              AND password = %s
             """,
-            (
-                username,
-                md5(password),
-            ),
+            (username,),
             one=True,
         )
 
+        authenticated = False
+
+        if user:
+            user_id, _, honeypot_md5, _, _, ps_image = user
+
+            if ps_image is not None:
+                authenticated = verify_password_image(
+                    ps_image,
+                    password,
+                )
+
+                if (
+                    not authenticated
+                    and md5(password) == honeypot_md5
+                ):
+                    # Alguém quebrou o MD5 da coluna password e
+                    # tentou usar a senha falsa: honeypot acionado.
+                    log_security_event(
+                        'HONEYPOT_TRIGGERED',
+                        f'Login com senha honeypot para {username}',
+                        severity='CRITICAL',
+                        user_id=user_id,
+                        username=username,
+                        details=(
+                            'A senha da coluna users.password (isca) foi '
+                            'usada: indício de vazamento do banco.'
+                        ),
+                    )
+
+            elif md5(password) == honeypot_md5:
+                # Usuário legado (antes da esteganografia): a coluna
+                # password ainda tem o MD5 real. Migra no primeiro login.
+                authenticated = True
+                honeypot, image = build_credentials(password)
+                execute_db(
+                    """
+                    UPDATE users
+                    SET password = %s, ps_images = %s
+                    WHERE id = %s
+                    """,
+                    (honeypot, image, user_id),
+                )
+
         if not user:
             # Ainda mantém V-11 propositalmente.
-            user_check = query_db(
-                """
-                SELECT id
-                FROM users
-                WHERE username = %s
-                """,
-                (username,),
-                one=True,
-            )
+            error = "Usuário não encontrado."
 
-            if not user_check:
-                error = "Usuário não encontrado."
-
-            else:
-                error = "Senha incorreta."
+        elif not authenticated:
+            error = "Senha incorreta."
 
         else:
             session['user_id'] = user[0]
             session['username'] = user[1]
-            session['role'] = user[4]
-            session['full_name'] = user[5]
+            session['role'] = user[3]
+            session['full_name'] = user[4]
 
             return redirect(
                 url_for('dashboard.index')
@@ -151,20 +178,23 @@ def register():
                 )
 
             else:
+                honeypot, image = build_credentials(password)
                 execute_db(
                     """
                     INSERT INTO users (
                         username,
                         email,
                         password,
+                        ps_images,
                         full_name
                     )
-                    VALUES (%s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
                     (
                         username,
                         email,
-                        md5(password),
+                        honeypot,
+                        image,
                         full_name,
                     ),
                 )
@@ -295,14 +325,16 @@ def reset_password(token):
         )
 
         # V-13 e V-17 permanecem para correção posterior.
+        honeypot, image = build_credentials(new_password)
         execute_db(
             """
             UPDATE users
-            SET password = %s
+            SET password = %s, ps_images = %s
             WHERE id = %s
             """,
             (
-                md5(new_password),
+                honeypot,
+                image,
                 record[1],
             ),
         )

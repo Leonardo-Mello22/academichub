@@ -119,3 +119,6 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+# imagens exportadas do banco (contem hashes de senha)
+ps_images_export/

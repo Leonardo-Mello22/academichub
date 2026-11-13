@@ -74,7 +74,8 @@ def log_security_event(
       LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT, REGISTER,
       PASSWORD_RESET_REQUEST, PASSWORD_RESET,
       ROLE_CHANGE, USER_UPDATE, USER_DELETE,
-      FILE_UPLOAD, GRADE_SUBMIT, ADMIN_ACCESS
+      FILE_UPLOAD, GRADE_SUBMIT, ADMIN_ACCESS,
+      HONEYPOT_TRIGGERED
     """
     if user_id is None and has_request_context():
         user_id = session.get('user_id')
