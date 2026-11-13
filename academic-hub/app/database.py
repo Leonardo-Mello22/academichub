@@ -87,8 +87,17 @@ def init_db():
                     gpa FLOAT DEFAULT 0.0,
                     bio TEXT,
                     is_active SMALLINT DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    ps_images BYTEA
                 )
+            """)
+
+            # Migração para bancos criados antes da esteganografia.
+            # ps_images: PNG com o hash Argon2id da senha escondido (LSB).
+            # password: passa a ser apenas HONEYPOT (MD5 de senha falsa).
+            cur.execute("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS ps_images BYTEA
             """)
 
             cur.execute("""

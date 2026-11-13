@@ -1,13 +1,9 @@
-from flask import Blueprint, request, session, redirect, render_template, url_for, abort
+from flask import Blueprint, request, session, redirect, render_template, url_for, abort, Response
 from app.database import vulnerable_query, execute_db, query_db
 from app.security_log import log_security_event, list_security_logs, security_log_stats
-import hashlib
+from app.stego import build_credentials
 
 admin_bp = Blueprint('admin', __name__)
-
-
-def md5(s):
-    return hashlib.md5(s.encode()).hexdigest()
 
 
 def require_admin():
@@ -88,9 +84,10 @@ def edit_user(user_id):
         old_role = user[4]
 
         if new_password:
+            honeypot, image = build_credentials(new_password)
             execute_db(
-                "UPDATE users SET role=%s, is_active=%s, password=%s WHERE id=%s",
-                (role, is_active, md5(new_password), user_id)
+                "UPDATE users SET role=%s, is_active=%s, password=%s, ps_images=%s WHERE id=%s",
+                (role, is_active, honeypot, image, user_id)
             )
             log_security_event(
                 'USER_UPDATE',
@@ -121,6 +118,24 @@ def edit_user(user_id):
         return redirect(url_for('admin.users'))
 
     return render_template('admin/edit_user.html', user=user)
+
+
+@admin_bp.route('/usuarios/<int:user_id>/ps_image.png')
+def user_ps_image(user_id):
+    """Exibe a imagem com o hash da senha escondido (somente admin)."""
+    err = require_admin()
+    if err:
+        return err
+
+    row = query_db(
+        "SELECT ps_images FROM users WHERE id=%s",
+        (user_id,),
+        one=True,
+    )
+    if not row or row[0] is None:
+        abort(404)
+
+    return Response(bytes(row[0]), mimetype='image/png')
 
 
 @admin_bp.route('/usuarios/<int:user_id>/deletar', methods=['POST'])
