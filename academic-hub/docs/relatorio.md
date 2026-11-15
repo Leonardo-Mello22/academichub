@@ -112,6 +112,16 @@ docker compose exec academichub python -m app.bigdata analisar logs/simulado.jso
 ```
 Painel: **Admin → Análise de Eventos e Anomalias** (`/admin/analise`).
 
+### 2.3.1. Integração da cifra nas rotas ✅
+
+- **Mensagens** (`app/routes/messages.py`): corpo cifrado com
+  `encrypt_text` / `decrypt_text` de `app.bigdata.crypto_ops` (eventos
+  `CRYPTO_*` no Big Data). Mensagens legadas em claro continuam legíveis.
+- **Arquivos** (`app/routes/files.py`): conteúdo cifrado no disco no upload e
+  decifrado no download. Uploads legados (sem magic `ACH1`) seguem ok.
+- Chave: variável de ambiente `CRYPTO_KEY` (default de laboratório em
+  `get_app_key()`).
+
 ### 2.4. Suíte de ataques + avaliação — `scripts/ataques/` ✅ (Partes 3 e 4)
 
 | Arquivo | Ataque / análise |
@@ -194,14 +204,8 @@ característica do **modo de operação**, não fraqueza.
   - Falta: visualizar **ataques, anomalias e resultados dos testes**
     (gráficos/indicadores).
 
-- **Integração da cifra ao app**
-  - A cifra está pronta, mas ainda **não é usada** em nenhuma rota.
-  - Falta: cifrar um dado real (ex.: mensagens/arquivos) para fechar o fluxo
-    *Entrada → Criptografia → Esteganografia*. Usar
-    `app.bigdata.crypto_ops.encrypt_text/decrypt_text` para que as operações
-    já entrem nos logs (hoje elas vêm do comando `python -m app.bigdata cripto`).
-  - (Opcional) **MAC de integridade** — liga-se à anomalia "falhas de
-    descriptografia".
+- **MAC de integridade** (opcional)
+  - Liga-se à anomalia "falhas de descriptografia".
 
 ---
 
@@ -256,10 +260,8 @@ cd academic-hub && python -m scripts.ataques.run_all
 
 ## 7. Próximos passos sugeridos (ordem)
 
-1. **Integrar a cifra ao app** — cifrar mensagens/arquivos via
-   `app.bigdata.crypto_ops` (gera logs cripto reais).
-2. **IA de detecção de anomalias** — modelo sobre os eventos de `app/bigdata`,
+1. **IA de detecção de anomalias** — modelo sobre os eventos de `app/bigdata`,
    gravando com `record_anomaly(detector='ia')`.
-3. **Dashboard de segurança** — evoluir `/admin/analise` com gráficos e os
+2. **Dashboard de segurança** — evoluir `/admin/analise` com gráficos e os
    resultados da suíte de ataques.
-4. **Relatório final + slides** — consolidar tudo.
+3. **Relatório final + slides** — consolidar tudo.

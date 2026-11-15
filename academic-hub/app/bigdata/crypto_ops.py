@@ -25,10 +25,32 @@ possa cifrar milhões de blocos sem gerar eventos.
 import base64
 import binascii
 import hashlib
+import os
 import time
 
 from app import crypto
 from app.bigdata.events import log_security_event
+from app.crypto.cipher import MAGIC
+
+# Chave de laboratório — sobrescrever com CRYPTO_KEY no ambiente.
+_DEFAULT_APP_KEY = 'AcademicHub-lab-key-nao-usar-em-producao'
+
+
+def get_app_key():
+    """Chave usada pelas rotas do portal (mensagens, arquivos)."""
+    return os.environ.get('CRYPTO_KEY') or _DEFAULT_APP_KEY
+
+
+def is_encrypted_envelope(data):
+    """True se `data` for um envelope AcademicCipher (bytes ou base64)."""
+    if not data:
+        return False
+    if isinstance(data, str):
+        try:
+            data = base64.b64decode(data, validate=True)
+        except (binascii.Error, ValueError):
+            return False
+    return data.startswith(MAGIC)
 
 
 def _envelope_id(envelope):

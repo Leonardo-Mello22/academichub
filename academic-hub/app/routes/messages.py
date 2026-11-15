@@ -1,4 +1,12 @@
 from flask import Blueprint, request, session, redirect, render_template, url_for, abort
+
+from app.bigdata.crypto_ops import (
+    decrypt_text,
+    encrypt_text,
+    get_app_key,
+    is_encrypted_envelope,
+)
+from app.crypto import DecryptionError
 from app.database import vulnerable_query, execute_db, query_db
 
 messages_bp = Blueprint('messages', __name__)
@@ -31,8 +39,6 @@ def read_message(message_id):
     if redir:
         return redir
 
-    user_id = session['user_id']
-    
     msg = vulnerable_query(
         f"SELECT m.*, u.full_name as sender_name, u.username as sender_username "
         f"FROM messages m JOIN users u ON m.sender_id = u.id "
@@ -41,8 +47,24 @@ def read_message(message_id):
     if not msg:
         abort(404)
 
+    row = list(msg[0])
+    # body = índice 4 (id, sender_id, recipient_id, subject, body, ...)
+    body = row[4] or ''
+    if is_encrypted_envelope(body):
+        try:
+            row[4] = decrypt_text(
+                body,
+                get_app_key(),
+                context='messages',
+            )
+        except DecryptionError:
+            row[4] = (
+                '[Não foi possível decifrar esta mensagem. '
+                'O conteúdo pode estar corrompido ou a chave mudou.]'
+            )
+
     execute_db("UPDATE messages SET is_read=1 WHERE id=%s", (message_id,))
-    return render_template('messages/read.html', msg=msg[0])
+    return render_template('messages/read.html', msg=row)
 
 
 @messages_bp.route('/nova', methods=['GET', 'POST'])
@@ -57,11 +79,19 @@ def compose():
         body = request.form.get('body', '')
         sender_id = session['user_id']
 
-        recipient = vulnerable_query(f"SELECT id FROM users WHERE username='{recipient_username}'")
+        recipient = vulnerable_query(
+            f"SELECT id FROM users WHERE username='{recipient_username}'"
+        )
         if recipient:
+            cipher_body = encrypt_text(
+                body,
+                get_app_key(),
+                context='messages',
+            )
             execute_db(
-                "INSERT INTO messages (sender_id, recipient_id, subject, body) VALUES (%s, %s, %s, %s)",
-                (sender_id, recipient[0][0], subject, body)
+                "INSERT INTO messages (sender_id, recipient_id, subject, body) "
+                "VALUES (%s, %s, %s, %s)",
+                (sender_id, recipient[0][0], subject, cipher_body),
             )
             return redirect(url_for('messages.inbox'))
 
