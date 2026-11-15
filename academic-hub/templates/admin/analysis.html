@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Análise de Eventos — AcademicHub{% endblock %}
+
+{% macro sev_badge(sev) -%}
+<span class="badge {% if sev in ('HIGH', 'ERROR', 'CRITICAL') %}badge-admin{% elif sev == 'WARNING' %}badge-professor{% else %}badge-global{% endif %}">{{ sev }}</span>
+{%- endmacro %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Análise de Eventos e Anomalias</h2>
+  <a href="/admin" class="btn btn-secondary">← Admin</a>
+</div>
+
+<div class="search-bar">
+  <form method="GET" action="/admin/analise">
+    <select name="horas" class="form-control form-select" style="max-width:220px;min-height:48px;">
+      {% for h, label in [(1, 'Última hora'), (24, 'Últimas 24h'), (168, 'Últimos 7 dias'), (720, 'Últimos 30 dias')] %}
+      <option value="{{ h }}" {% if hours == h %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Analisar</button>
+  </form>
+</div>
+
+{% if stored is not none %}
+<div class="alert alert-success">{{ stored }} padrão(ões) registrado(s) como anomalia.</div>
+{% endif %}
+
+<div class="dashboard-grid">
+  <div class="card stat-card">
+    <div class="stat-number">{{ report.total }}</div>
+    <div class="stat-label">Eventos analisados</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ report.auth.failures }}</div>
+    <div class="stat-label">Falhas de login</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ report.crypto.encrypt + report.crypto.decrypt }}</div>
+    <div class="stat-label">Operações criptográficas</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ '%.1f' % (report.crypto.decrypt_failure_rate * 100) }}%</div>
+    <div class="stat-label">Falhas de decifragem</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ report.processing.events_per_second }}</div>
+    <div class="stat-label">Eventos/s processados</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Padrões suspeitos na janela ({{ patterns|length }})</h3>
+  {% if patterns %}
+  <table class="table">
+    <thead>
+      <tr><th>Severidade</th><th>Tipo</th><th>Alvo</th><th>Score</th><th>Descrição</th></tr>
+    </thead>
+    <tbody>
+      {% for p in patterns %}
+      <tr>
+        <td>{{ sev_badge(p.severity) }}</td>
+        <td><code>{{ p.anomaly_type }}</code></td>
+        <td>{{ p.subject }}</td>
+        <td>{{ '%.2f' % p.score }}</td>
+        <td>{{ p.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="POST" action="/admin/analise">
+    <input type="hidden" name="horas" value="{{ hours }}">
+    <input type="hidden" name="acao" value="registrar">
+    <button type="submit" class="btn btn-accent">Registrar como anomalias</button>
+  </form>
+  {% else %}
+  <p class="text-muted">Nenhum padrão suspeito encontrado nesta janela.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Distribuição dos eventos</h3>
+  <table class="table">
+    <thead><tr><th>Tipo de evento</th><th>Quantidade</th></tr></thead>
+    <tbody>
+      {% for etype, n in report.by_type.items() %}
+      <tr><td><code>{{ etype }}</code></td><td>{{ n }}</td></tr>
+      {% else %}
+      <tr><td colspan="2" class="text-muted">Sem eventos na janela.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="text-muted">
+    IPs com mais falhas de login:
+    {% for ip, n in report.auth.top_failure_ips[:5] %}{{ ip }} ({{ n }}){% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
+  </p>
+</div>
+
+<div class="card">
+  <h3>Anomalias registradas</h3>
+  {% if anomalies %}
+  <table class="table">
+    <thead>
+      <tr><th>Quando</th><th>Severidade</th><th>Tipo</th><th>Alvo</th><th>Detector</th><th>Descrição</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for a in anomalies %}
+      <tr>
+        <td>{{ a.detected_at.strftime('%d/%m %H:%M') }}</td>
+        <td>{{ sev_badge(a.severity) }}</td>
+        <td title="{{ anomaly_types.get(a.anomaly_type, '') }}"><code>{{ a.anomaly_type }}</code></td>
+        <td>{{ a.subject or '—' }}</td>
+        <td>{{ a.detector }}</td>
+        <td>{{ a.description }}</td>
+        <td>
+          <form method="POST" action="/admin/anomalias/{{ a.id }}/status">
+            <select name="status" class="form-control form-select" onchange="this.form.submit()">
+              {% for s in statuses %}
+              <option value="{{ s }}" {% if a.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted">Nenhuma anomalia registrada ainda.</p>
+  {% endif %}
+</div>
+{% endblock %}

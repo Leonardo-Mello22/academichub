@@ -10,6 +10,7 @@ from flask import (
     abort,
 )
 
+from app.bigdata.events import log_security_event
 from app.database import (
     execute_db,
     query_db,
@@ -125,7 +126,6 @@ def upload_file():
         )
     )
 
-    from app.security_log import log_security_event
     log_security_event(
         'FILE_UPLOAD',
         f'Upload de arquivo: {original_name}',
@@ -143,7 +143,6 @@ def download_file(filename):
 
     from flask import Response
     import mimetypes
-    from app.security_log import log_security_event
 
     filepath = os.path.normpath(
         os.path.join(

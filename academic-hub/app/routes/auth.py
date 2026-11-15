@@ -11,7 +11,7 @@ from app.database import (
     execute_db,
     query_db,
 )
-from app.security_log import log_security_event
+from app.bigdata.events import log_security_event
 from app.stego import (
     build_credentials,
     md5,
@@ -97,15 +97,36 @@ def login():
         if not user:
             # Ainda mantém V-11 propositalmente.
             error = "Usuário não encontrado."
+            log_security_event(
+                'LOGIN_FAILURE',
+                f'Login com usuário inexistente: {username}',
+                severity='WARNING',
+                username=username,
+                details={'reason': 'user_not_found'},
+            )
 
         elif not authenticated:
             error = "Senha incorreta."
+            log_security_event(
+                'LOGIN_FAILURE',
+                f'Senha incorreta para {username}',
+                severity='WARNING',
+                user_id=user[0],
+                username=username,
+                details={'reason': 'wrong_password'},
+            )
 
         else:
             session['user_id'] = user[0]
             session['username'] = user[1]
             session['role'] = user[3]
             session['full_name'] = user[4]
+
+            log_security_event(
+                'LOGIN_SUCCESS',
+                f'Login bem-sucedido: {username}',
+                details={'role': user[3]},
+            )
 
             return redirect(
                 url_for('dashboard.index')
@@ -159,6 +180,13 @@ def register():
                 f"O nome de usuário "
                 f"'{username}' já está em uso."
             )
+            log_security_event(
+                'REGISTER_FAILURE',
+                f'Registro com usuário já existente: {username}',
+                severity='WARNING',
+                username=username,
+                details={'reason': 'username_taken'},
+            )
 
         else:
             existing_email = query_db(
@@ -175,6 +203,13 @@ def register():
                 error = (
                     f"O e-mail "
                     f"'{email}' já está cadastrado."
+                )
+                log_security_event(
+                    'REGISTER_FAILURE',
+                    f'Registro com e-mail já cadastrado: {email}',
+                    severity='WARNING',
+                    username=username,
+                    details={'reason': 'email_taken'},
                 )
 
             else:
@@ -198,6 +233,11 @@ def register():
                         full_name,
                     ),
                 )
+                log_security_event(
+                    'REGISTER',
+                    f'Novo usuário registrado: {username}',
+                    username=username,
+                )
 
                 return redirect(
                     url_for('auth.login')
@@ -211,6 +251,11 @@ def register():
 
 @auth_bp.route('/logout')
 def logout():
+    if session.get('user_id'):
+        log_security_event(
+            'LOGOUT',
+            f'Logout: {session.get("username")}',
+        )
     session.clear()
 
     return redirect(
@@ -249,6 +294,12 @@ def forgot_password():
                 "Nenhuma conta encontrada "
                 "com este e-mail."
             )
+            log_security_event(
+                'PASSWORD_RESET_REQUEST',
+                'Reset solicitado para e-mail inexistente',
+                severity='WARNING',
+                details={'reason': 'email_not_found', 'email': email},
+            )
 
         else:
             user_id = user[0]
@@ -279,6 +330,14 @@ def forgot_password():
                     user_id,
                     next_token,
                 ),
+            )
+
+            log_security_event(
+                'PASSWORD_RESET_REQUEST',
+                f'Solicitação de reset de senha para user_id={user_id}',
+                severity='WARNING',
+                user_id=user_id,
+                details={'email': email},
             )
 
             msg = (
@@ -312,6 +371,12 @@ def reset_password(token):
     )
 
     if not record:
+        log_security_event(
+            'PASSWORD_RESET',
+            f'Tentativa de reset com token inválido: {token}',
+            severity='WARNING',
+            details={'reason': 'invalid_token'},
+        )
         return render_template(
             'auth/reset_password.html',
             error="Token inválido.",
@@ -337,6 +402,13 @@ def reset_password(token):
                 image,
                 record[1],
             ),
+        )
+
+        log_security_event(
+            'PASSWORD_RESET',
+            f'Senha redefinida para user_id={record[1]} via token',
+            severity='HIGH',
+            user_id=record[1],
         )
 
         # V-14:

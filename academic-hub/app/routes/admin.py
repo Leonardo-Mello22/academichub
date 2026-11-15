@@ -1,6 +1,14 @@
 from flask import Blueprint, request, session, redirect, render_template, url_for, abort, Response
 from app.database import vulnerable_query, execute_db, query_db
-from app.security_log import log_security_event, list_security_logs, security_log_stats
+from app.bigdata.analysis import analyze, find_patterns, iter_db_events, store_patterns
+from app.bigdata.anomalies import (
+    ANOMALY_TYPES,
+    STATUSES,
+    anomaly_stats,
+    list_anomalies,
+    set_anomaly_status,
+)
+from app.bigdata.events import log_security_event, list_security_logs, security_log_stats
 from app.stego import build_credentials
 
 admin_bp = Blueprint('admin', __name__)
@@ -33,6 +41,7 @@ def dashboard():
         'messages': query_db("SELECT COUNT(*) FROM messages", one=True)[0],
     }
     sec = security_log_stats()
+    sec['open_anomalies'] = anomaly_stats()['open']
     return render_template('admin/dashboard.html', stats=stats, sec=sec)
 
 
@@ -52,6 +61,47 @@ def security_logs():
         event_type=event_type or '',
         severity=severity or '',
     )
+
+
+@admin_bp.route('/analise', methods=['GET', 'POST'])
+def analysis():
+    """Análise de padrões (Big Data) + anomalias registradas."""
+    err = require_admin()
+    if err:
+        return err
+
+    hours = request.values.get('horas', type=int) or 24
+    report = analyze(iter_db_events(window_hours=hours))
+    patterns = find_patterns(report)
+
+    stored = None
+    if request.method == 'POST' and request.form.get('acao') == 'registrar':
+        stored = store_patterns(patterns)
+
+    return render_template(
+        'admin/analysis.html',
+        hours=hours,
+        report=report,
+        patterns=patterns,
+        stored=stored,
+        anomalies=list_anomalies(limit=100),
+        anomaly_types=ANOMALY_TYPES,
+        statuses=STATUSES,
+    )
+
+
+@admin_bp.route('/anomalias/<int:anomaly_id>/status', methods=['POST'])
+def anomaly_status(anomaly_id):
+    err = require_admin()
+    if err:
+        return err
+
+    status = request.form.get('status', '')
+    if status not in STATUSES:
+        abort(400)
+
+    set_anomaly_status(anomaly_id, status)
+    return redirect(url_for('admin.analysis'))
 
 
 @admin_bp.route('/usuarios')
