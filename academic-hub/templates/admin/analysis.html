@@ -23,7 +23,10 @@
 </div>
 
 {% if stored is not none %}
-<div class="alert alert-success">{{ stored }} padrão(ões) registrado(s) como anomalia.</div>
+<div class="alert alert-success">{{ stored }} padrão(ões) de regras registrado(s) como anomalia.</div>
+{% endif %}
+{% if stored_ia is not none %}
+<div class="alert alert-success">{{ stored_ia }} detecção(ões) da IA registrada(s) como anomalia.</div>
 {% endif %}
 
 <div class="dashboard-grid">
@@ -50,7 +53,7 @@
 </div>
 
 <div class="card">
-  <h3>Padrões suspeitos na janela ({{ patterns|length }})</h3>
+  <h3>Padrões suspeitos — regras ({{ patterns|length }})</h3>
   {% if patterns %}
   <table class="table">
     <thead>
@@ -71,10 +74,47 @@
   <form method="POST" action="/admin/analise">
     <input type="hidden" name="horas" value="{{ hours }}">
     <input type="hidden" name="acao" value="registrar">
-    <button type="submit" class="btn btn-accent">Registrar como anomalias</button>
+    <button type="submit" class="btn btn-accent">Registrar regras como anomalias</button>
   </form>
   {% else %}
-  <p class="text-muted">Nenhum padrão suspeito encontrado nesta janela.</p>
+  <p class="text-muted">Nenhum padrão suspeito (regras) nesta janela.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Anomalias — IA Isolation Forest ({{ ia_patterns|length }})</h3>
+  <p class="text-muted">
+    {% if ia_model_loaded %}
+    Modelo treinado carregado (<code>logs/models/isolation_forest.joblib</code>).
+    {% else %}
+    Sem modelo pré-treinado — detecção não supervisionada nesta janela
+    (treine com <code>python -m app.bigdata ia pipeline</code>).
+    {% endif %}
+  </p>
+  {% if ia_patterns %}
+  <table class="table">
+    <thead>
+      <tr><th>Severidade</th><th>Tipo</th><th>Alvo (IP)</th><th>Score</th><th>Descrição</th></tr>
+    </thead>
+    <tbody>
+      {% for p in ia_patterns %}
+      <tr>
+        <td>{{ sev_badge(p.severity) }}</td>
+        <td><code>{{ p.anomaly_type }}</code></td>
+        <td>{{ p.subject }}</td>
+        <td>{{ '%.2f' % p.score }}</td>
+        <td>{{ p.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="POST" action="/admin/analise">
+    <input type="hidden" name="horas" value="{{ hours }}">
+    <input type="hidden" name="acao" value="registrar_ia">
+    <button type="submit" class="btn btn-accent">Registrar IA como anomalias</button>
+  </form>
+  {% else %}
+  <p class="text-muted">Nenhuma anomalia detectada pela IA nesta janela.</p>
   {% endif %}
 </div>
 

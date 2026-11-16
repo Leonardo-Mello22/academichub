@@ -1,3 +1,5 @@
+import os
+
 from flask import Blueprint, request, session, redirect, render_template, url_for, abort, Response
 from app.database import vulnerable_query, execute_db, query_db
 from app.bigdata.analysis import analyze, find_patterns, iter_db_events, store_patterns
@@ -9,6 +11,12 @@ from app.bigdata.anomalies import (
     set_anomaly_status,
 )
 from app.bigdata.events import log_security_event, list_security_logs, security_log_stats
+from app.bigdata.ia import (
+    DEFAULT_MODEL_PATH,
+    detect_anomalies,
+    load_model,
+    store_ia_patterns,
+)
 from app.stego import build_credentials
 
 admin_bp = Blueprint('admin', __name__)
@@ -65,25 +73,45 @@ def security_logs():
 
 @admin_bp.route('/analise', methods=['GET', 'POST'])
 def analysis():
-    """Análise de padrões (Big Data) + anomalias registradas."""
+    """Análise de padrões (regras + IA) e anomalias registradas."""
     err = require_admin()
     if err:
         return err
 
     hours = request.values.get('horas', type=int) or 24
-    report = analyze(iter_db_events(window_hours=hours))
+    events = list(iter_db_events(window_hours=hours))
+    report = analyze(events)
     patterns = find_patterns(report)
 
+    model = None
+    ia_model_loaded = False
+    if os.path.exists(DEFAULT_MODEL_PATH):
+        try:
+            model = load_model(DEFAULT_MODEL_PATH)
+            ia_model_loaded = True
+        except Exception:
+            model = None
+
+    ia_patterns = detect_anomalies(events, model=model)
+
     stored = None
-    if request.method == 'POST' and request.form.get('acao') == 'registrar':
-        stored = store_patterns(patterns)
+    stored_ia = None
+    if request.method == 'POST':
+        acao = request.form.get('acao')
+        if acao == 'registrar':
+            stored = store_patterns(patterns)
+        elif acao == 'registrar_ia':
+            stored_ia = store_ia_patterns(ia_patterns)
 
     return render_template(
         'admin/analysis.html',
         hours=hours,
         report=report,
         patterns=patterns,
+        ia_patterns=ia_patterns,
+        ia_model_loaded=ia_model_loaded,
         stored=stored,
+        stored_ia=stored_ia,
         anomalies=list_anomalies(limit=100),
         anomaly_types=ANOMALY_TYPES,
         statuses=STATUSES,

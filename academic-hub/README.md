@@ -22,11 +22,12 @@ academic-hub/
 │   ├── routes/               1. entrada de dados: páginas (login, notas, arquivos, admin...)
 │   ├── crypto/               2. criptografia: AcademicCipher (cifra autoral SPN)
 │   ├── stego.py              3. esteganografia: hash Argon2id escondido em PNG
-│   └── bigdata/              4. Big Data: eventos, logs cripto, anomalias, análise
+│   └── bigdata/              4–5. Big Data + IA de anomalias
 │       ├── events.py            coleta  -> banco + logs/security_events.jsonl
 │       ├── crypto_ops.py        cifra/decifra com log
 │       ├── anomalies.py         armazenamento das anomalias detectadas
-│       ├── analysis.py          análise de padrões em grande volume
+│       ├── analysis.py          análise de padrões (regras)
+│       ├── ia.py                Isolation Forest (camada 5)
 │       └── simulation.py        gerador de eventos sintéticos
 ├── scripts/ataques/          ataques à cifra (avalanche, diferencial, força bruta, estatístico)
 ├── templates/  static/       interface web
@@ -47,11 +48,14 @@ docker compose exec academichub python -m app.bigdata analisar --banco --registr
 docker compose exec academichub python -m app.bigdata simular --eventos 1000000
 docker compose exec academichub python -m app.bigdata analisar logs/simulado.jsonl
 
+# IA (Isolation Forest): treina no normal, detecta nos ataques
+docker compose exec academichub python -m app.bigdata ia pipeline --eventos 50000 --registrar
+
 # suíte de ataques (gera scripts/ataques/resultados/relatorio_ataques.md)
 python -m scripts.ataques.run_all
 ```
 
-Painel de segurança (admin): `/admin/logs` e `/admin/analise`.
+Painel de segurança (admin): `/admin/logs` e `/admin/analise` (regras + IA).
 
 ## Como executar
 

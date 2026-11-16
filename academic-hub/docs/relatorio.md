@@ -17,7 +17,7 @@ Este documento registra **o que já foi feito** e **o que ainda falta**, mapeado
 | 2 | Criptografia simétrica autoral | 🟢 **Feito** (`app/crypto/`) |
 | 3 | Esteganografia (ocultar em imagem) | 🟢 **Feito** (`app/stego.py`) |
 | 4 | Big Data (coleta/processamento de eventos) | 🟢 **Feito** (`app/bigdata/`) |
-| 5 | Inteligência Artificial (anomalias) | 🔴 Falta |
+| 5 | Inteligência Artificial (anomalias) | 🟢 **Feito** (`app/bigdata/ia.py`) |
 | 6 | Dashboard de segurança | 🟡 Parcial (`templates/admin/`) |
 
 Legenda: 🟢 pronto · 🟡 parcial · 🔴 não iniciado
@@ -112,6 +112,24 @@ docker compose exec academichub python -m app.bigdata analisar logs/simulado.jso
 ```
 Painel: **Admin → Análise de Eventos e Anomalias** (`/admin/analise`).
 
+### 2.3.0. IA de anomalias — `app/bigdata/ia.py` ✅ (Parte 5 / camada 5)
+
+Isolation Forest (scikit-learn) sobre features por IP derivadas dos eventos
+(`login_failure`, `crypto_decrypt_failure`, `file_suspicious`, honeypot, etc.).
+
+- Treino no tráfego normal → modelo em `logs/models/isolation_forest.joblib`
+- Detecção classifica outliers nos **5 tipos** do enunciado e grava com
+  `record_anomaly(..., detector='ia')`
+- Coexiste com as regras (`detector='regras'`) no painel `/admin/analise`
+
+```bash
+docker compose exec academichub python -m app.bigdata ia pipeline --eventos 50000
+docker compose exec academichub python -m app.bigdata ia detectar --arquivo logs/ataques.jsonl --registrar
+```
+
+> O assistente Gemini (`assistant.py`) continua sendo só chat de estudos —
+> a detecção de anomalias é o Isolation Forest.
+
 ### 2.3.1. Integração da cifra nas rotas ✅
 
 - **Mensagens** (`app/routes/messages.py`): corpo cifrado com
@@ -184,14 +202,6 @@ característica do **modo de operação**, não fraqueza.
 
 ### 🔴 Faltando por completo
 
-- **IA de detecção de anomalias (Parte 5 / camada 5)**
-  - O `app/routes/assistant.py` é um assistente de estudos (Gemini), **não**
-    detecta anomalias.
-  - Já existe a base: as regras estatísticas de `app/bigdata/analysis.py`
-    detectam os 5 tipos, e `record_anomaly(..., detector='ia')` é o ponto de
-    gravação. Falta o modelo de IA em si (ex.: Isolation Forest sobre as
-    features por IP/usuário/hora produzidas pelo `EventAggregator`).
-
 - **Relatório final + slides (Parte 5)**
   - Consolidar: descrição do algoritmo, funcionamento, testes, resultados,
     conclusão. (Este arquivo e o `relatorio_ataques.md` são a base.)
@@ -200,7 +210,7 @@ característica do **modo de operação**, não fraqueza.
 
 - **Dashboard de segurança (Parte 5 / camada 6)**
   - Já há `templates/admin/dashboard.html`, `security_logs.html` e
-    `analysis.html` (`/admin/analise`: volume, padrões e anomalias em tabelas).
+    `analysis.html` (`/admin/analise`: volume, padrões, regras **e IA**).
   - Falta: visualizar **ataques, anomalias e resultados dos testes**
     (gráficos/indicadores).
 
@@ -237,7 +247,7 @@ característica do **modo de operação**, não fraqueza.
 
 ### Parte 5 — Entregáveis e demais camadas
 - [x] Esteganografia
-- [ ] IA de detecção de anomalias
+- [x] IA de detecção de anomalias (Isolation Forest)
 - [ ] Dashboard de ataques/anomalias/testes
 - [ ] Relatório final + slides
 
@@ -260,8 +270,6 @@ cd academic-hub && python -m scripts.ataques.run_all
 
 ## 7. Próximos passos sugeridos (ordem)
 
-1. **IA de detecção de anomalias** — modelo sobre os eventos de `app/bigdata`,
-   gravando com `record_anomaly(detector='ia')`.
-2. **Dashboard de segurança** — evoluir `/admin/analise` com gráficos e os
+1. **Dashboard de segurança** — evoluir `/admin/analise` com gráficos e os
    resultados da suíte de ataques.
-3. **Relatório final + slides** — consolidar tudo.
+2. **Relatório final + slides** — consolidar tudo.

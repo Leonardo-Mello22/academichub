@@ -4,3 +4,6 @@ psycopg2-binary==2.9.9
 google-genai==2.23.0
 argon2-cffi==23.1.0
 Pillow==10.4.0
+scikit-learn==1.5.2
+joblib==1.4.2
+numpy==2.1.3
