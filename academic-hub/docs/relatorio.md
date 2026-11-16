@@ -18,7 +18,7 @@ Este documento registra **o que já foi feito** e **o que ainda falta**, mapeado
 | 3 | Esteganografia (ocultar em imagem) | 🟢 **Feito** (`app/stego.py`) |
 | 4 | Big Data (coleta/processamento de eventos) | 🟢 **Feito** (`app/bigdata/`) |
 | 5 | Inteligência Artificial (anomalias) | 🟢 **Feito** (`app/bigdata/ia.py`) |
-| 6 | Dashboard de segurança | 🟡 Parcial (`templates/admin/`) |
+| 6 | Dashboard de segurança | 🟢 **Feito** (`/admin/analise` + Chart.js) |
 
 Legenda: 🟢 pronto · 🟡 parcial · 🔴 não iniciado
 
@@ -109,8 +109,12 @@ docker compose exec academichub python -m app.bigdata cripto --operacoes 50
 docker compose exec academichub python -m app.bigdata analisar --banco --registrar
 docker compose exec academichub python -m app.bigdata simular --eventos 1000000
 docker compose exec academichub python -m app.bigdata analisar logs/simulado.jsonl
+
+# Preenche o dashboard web (grava no PostgreSQL; --seed muda o padrão)
+docker compose exec academichub python -m app.bigdata simular --eventos 30000 --banco --substituir
+docker compose exec academichub python -m app.bigdata importar logs/ataques.jsonl --substituir
 ```
-Painel: **Admin → Análise de Eventos e Anomalias** (`/admin/analise`).
+Painel: **Admin → Dashboard de Segurança** (`/admin/analise`).
 
 ### 2.3.0. IA de anomalias — `app/bigdata/ia.py` ✅ (Parte 5 / camada 5)
 
@@ -140,7 +144,13 @@ docker compose exec academichub python -m app.bigdata ia detectar --arquivo logs
 - Chave: variável de ambiente `CRYPTO_KEY` (default de laboratório em
   `get_app_key()`).
 
-### 2.4. Suíte de ataques + avaliação — `scripts/ataques/` ✅ (Partes 3 e 4)
+### 2.4. Dashboard de segurança — `/admin/analise` ✅ (Parte 5 / camada 6)
+
+Painel admin com **Chart.js**: volume por hora, categorias, falhas de login,
+operações cripto, alertas (regras + IA), anomalias abertas, e cards/gráficos
+dos resultados da suíte de ataques (`relatorio_ataques.md`).
+
+### 2.5. Suíte de ataques + avaliação — `scripts/ataques/` ✅ (Partes 3 e 4)
 
 | Arquivo | Ataque / análise |
 |---|---|
@@ -206,13 +216,7 @@ característica do **modo de operação**, não fraqueza.
   - Consolidar: descrição do algoritmo, funcionamento, testes, resultados,
     conclusão. (Este arquivo e o `relatorio_ataques.md` são a base.)
 
-### 🟡 Parcial — falta completar
-
-- **Dashboard de segurança (Parte 5 / camada 6)**
-  - Já há `templates/admin/dashboard.html`, `security_logs.html` e
-    `analysis.html` (`/admin/analise`: volume, padrões, regras **e IA**).
-  - Falta: visualizar **ataques, anomalias e resultados dos testes**
-    (gráficos/indicadores).
+### 🟡 Parcial / opcional
 
 - **MAC de integridade** (opcional)
   - Liga-se à anomalia "falhas de descriptografia".
@@ -248,7 +252,7 @@ característica do **modo de operação**, não fraqueza.
 ### Parte 5 — Entregáveis e demais camadas
 - [x] Esteganografia
 - [x] IA de detecção de anomalias (Isolation Forest)
-- [ ] Dashboard de ataques/anomalias/testes
+- [x] Dashboard de ataques/anomalias/testes (`/admin/analise`)
 - [ ] Relatório final + slides
 
 ---
@@ -270,6 +274,4 @@ cd academic-hub && python -m scripts.ataques.run_all
 
 ## 7. Próximos passos sugeridos (ordem)
 
-1. **Dashboard de segurança** — evoluir `/admin/analise` com gráficos e os
-   resultados da suíte de ataques.
-2. **Relatório final + slides** — consolidar tudo.
+1. **Relatório final + slides** — consolidar tudo.

@@ -133,8 +133,13 @@ def _attack_events(rng, n, start, hours, users, ips):
         yield ev
 
 
-def generate(path, n_events=100_000, hours=72, with_attacks=True, seed=42):
-    """Grava `n_events` eventos simulados em `path`. Retorna o total gravado."""
+def iter_simulated_events(
+    n_events=100_000,
+    hours=72,
+    with_attacks=True,
+    seed=42,
+):
+    """Gera eventos sintéticos (gerador — não grava nada)."""
     rng = random.Random(seed)
     users = [f'aluno{i:03d}' for i in range(180)] + [
         f'prof{i:02d}' for i in range(20)
@@ -142,18 +147,30 @@ def generate(path, n_events=100_000, hours=72, with_attacks=True, seed=42):
     ips = [f'10.0.{i // 250}.{i % 250 + 1}' for i in range(150)]
     start = (datetime.now() - timedelta(hours=hours)).replace(microsecond=0)
 
+    sources = [_normal_events(rng, n_events, start, hours, users, ips)]
+    if with_attacks:
+        sources.append(
+            _attack_events(rng, n_events, start, hours, users, ips)
+        )
+
+    for source in sources:
+        yield from source
+
+
+def generate(path, n_events=100_000, hours=72, with_attacks=True, seed=42):
+    """Grava `n_events` eventos simulados em `path`. Retorna o total gravado."""
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     written = 0
 
     with open(path, 'w', encoding='utf-8') as fh:
-        sources = [_normal_events(rng, n_events, start, hours, users, ips)]
-        if with_attacks:
-            sources.append(_attack_events(rng, n_events, start, hours, users, ips))
-
-        for source in sources:
-            for ev in source:
-                fh.write(json.dumps(ev, ensure_ascii=False))
-                fh.write('\n')
-                written += 1
+        for ev in iter_simulated_events(
+            n_events=n_events,
+            hours=hours,
+            with_attacks=with_attacks,
+            seed=seed,
+        ):
+            fh.write(json.dumps(ev, ensure_ascii=False))
+            fh.write('\n')
+            written += 1
 
     return written

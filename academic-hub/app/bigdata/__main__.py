@@ -2,25 +2,24 @@
 Linha de comando da camada de Big Data.
 
 Uso:
-    python -m app.bigdata simular  [--eventos N] [--horas H] [--saida ARQ] [--sem-ataques]
-    python -m app.bigdata analisar [ARQ] [--banco] [--horas H] [--registrar] [--ia] [--json SAIDA]
+    python -m app.bigdata simular  [--eventos N] [--horas H] [--saida ARQ]
+                                  [--sem-ataques] [--seed N] [--banco] [--substituir]
+    python -m app.bigdata importar ARQ [--substituir]
+    python -m app.bigdata analisar [ARQ] [--banco] [--horas H] [--registrar] [--ia]
     python -m app.bigdata cripto   [--operacoes N]
-    python -m app.bigdata ia treinar   --arquivo ARQ [--modelo PATH]
-    python -m app.bigdata ia detectar  [--arquivo ARQ|--banco] [--modelo PATH] [--registrar]
-    python -m app.bigdata ia pipeline  [--eventos N] [--registrar]
+    python -m app.bigdata ia treinar|detectar|pipeline ...
 
 Exemplos:
-    python -m app.bigdata simular --eventos 1000000
-    python -m app.bigdata analisar logs/simulado.jsonl
-    python -m app.bigdata analisar --banco --registrar --ia
-    python -m app.bigdata cripto --operacoes 50
+    # JSONL + PostgreSQL (preenche o dashboard /admin/analise)
+    python -m app.bigdata simular --eventos 30000 --banco --substituir
 
-    python -m app.bigdata simular --sem-ataques --saida logs/normal.jsonl
-    python -m app.bigdata ia treinar --arquivo logs/normal.jsonl
-    python -m app.bigdata simular --saida logs/ataques.jsonl
-    python -m app.bigdata ia detectar --arquivo logs/ataques.jsonl --registrar
+    # só importar um JSONL já gerado
+    python -m app.bigdata importar logs/ataques.jsonl --substituir
 
-    python -m app.bigdata ia pipeline --eventos 50000 --registrar
+    # variar o padrão sintético
+    python -m app.bigdata simular --eventos 20000 --seed 99 --banco
+
+    python -m app.bigdata ia pipeline --eventos 50000 --banco --registrar
 """
 
 import argparse
@@ -37,7 +36,12 @@ from app.bigdata.analysis import (
     public_report,
     store_patterns,
 )
-from app.bigdata.events import EVENTS_FILE, LOG_DIR
+from app.bigdata.events import (
+    EVENTS_FILE,
+    LOG_DIR,
+    delete_simulated_events,
+    import_jsonl_to_db,
+)
 from app.bigdata.ia import DEFAULT_MODEL_PATH
 
 
@@ -91,15 +95,44 @@ def _print_ia_patterns(patterns):
 def cmd_simular(args):
     from app.bigdata.simulation import generate
 
-    print(f'Gerando {args.eventos:,} eventos em {args.saida} ...')
+    print(
+        f'Gerando {args.eventos:,} eventos (seed={args.seed}) '
+        f'em {args.saida} ...'
+    )
     total = generate(
         args.saida,
         n_events=args.eventos,
         hours=args.horas,
         with_attacks=not args.sem_ataques,
+        seed=args.seed,
     )
     size_mb = os.path.getsize(args.saida) / 1_048_576
-    print(f'{total:,} eventos gravados ({size_mb:.1f} MB).')
+    print(f'{total:,} eventos no JSONL ({size_mb:.1f} MB).')
+
+    if args.banco:
+        if args.substituir:
+            removed = delete_simulated_events()
+            print(f'Removidos {removed:,} eventos simulados anteriores.')
+        print('Importando para o PostgreSQL (security_logs) ...')
+        inserted = import_jsonl_to_db(args.saida)
+        print(f'{inserted:,} eventos inseridos no banco.')
+        print('Abra /admin/analise (janela 7 dias) para ver os gráficos.')
+    return 0
+
+
+def cmd_importar(args):
+    if not os.path.exists(args.arquivo):
+        print(f'Arquivo não encontrado: {args.arquivo}', file=sys.stderr)
+        return 1
+
+    if args.substituir:
+        removed = delete_simulated_events()
+        print(f'Removidos {removed:,} eventos simulados anteriores.')
+
+    print(f'Importando {args.arquivo} → security_logs ...')
+    inserted = import_jsonl_to_db(args.arquivo)
+    print(f'{inserted:,} eventos inseridos no banco.')
+    print('Abra /admin/analise para ver os gráficos.')
     return 0
 
 
@@ -245,9 +278,16 @@ def cmd_ia_pipeline(args):
     from app.bigdata.simulation import generate
 
     model_path = args.modelo or DEFAULT_MODEL_PATH
+    seed = args.seed
 
     print(f'[1/4] Gerando tráfego normal ({args.eventos:,}) → {args.normal}')
-    generate(args.normal, n_events=args.eventos, hours=args.horas, with_attacks=False)
+    generate(
+        args.normal,
+        n_events=args.eventos,
+        hours=args.horas,
+        with_attacks=False,
+        seed=seed,
+    )
 
     print('[2/4] Treinando Isolation Forest ...')
     model = train_model(
@@ -258,7 +298,13 @@ def cmd_ia_pipeline(args):
     print(f'       Modelo: {path}')
 
     print(f'[3/4] Gerando tráfego com ataques ({args.eventos:,}) → {args.ataques}')
-    generate(args.ataques, n_events=args.eventos, hours=args.horas, with_attacks=True)
+    generate(
+        args.ataques,
+        n_events=args.eventos,
+        hours=args.horas,
+        with_attacks=True,
+        seed=seed + 1,
+    )
 
     print('[4/4] Detectando anomalias ...')
     patterns = detect_anomalies(
@@ -269,6 +315,14 @@ def cmd_ia_pipeline(args):
     _print_ia_patterns(patterns)
     tipos = sorted({p['anomaly_type'] for p in patterns})
     print(f'\nTipos encontrados: {tipos or "—"}')
+
+    if args.banco:
+        if args.substituir:
+            removed = delete_simulated_events()
+            print(f'Removidos {removed:,} eventos simulados anteriores.')
+        print('Importando tráfego com ataques para o banco ...')
+        inserted = import_jsonl_to_db(args.ataques)
+        print(f'{inserted:,} eventos no PostgreSQL.')
 
     if args.registrar and patterns:
         n = store_ia_patterns(patterns)
@@ -288,7 +342,30 @@ def main(argv=None):
     p.add_argument('--horas', type=int, default=72)
     p.add_argument('--saida', default=DEFAULT_SIM_FILE)
     p.add_argument('--sem-ataques', action='store_true')
+    p.add_argument('--seed', type=int, default=42, help='semente (mude para variar)')
+    p.add_argument(
+        '--banco',
+        action='store_true',
+        help='também grava no PostgreSQL (preenche o dashboard)',
+    )
+    p.add_argument(
+        '--substituir',
+        action='store_true',
+        help='apaga eventos "(simulado)" antes de importar',
+    )
     p.set_defaults(func=cmd_simular)
+
+    p = sub.add_parser(
+        'importar',
+        help='importa um JSONL existente para security_logs',
+    )
+    p.add_argument('arquivo', help='caminho do JSONL')
+    p.add_argument(
+        '--substituir',
+        action='store_true',
+        help='apaga eventos "(simulado)" antes de importar',
+    )
+    p.set_defaults(func=cmd_importar)
 
     p = sub.add_parser('analisar', help='analisa padrões nos eventos')
     p.add_argument('arquivo', nargs='?', help=f'JSONL (padrão: {EVENTS_FILE})')
@@ -332,6 +409,17 @@ def main(argv=None):
     pp.add_argument('--ataques', default=DEFAULT_ATTACK_FILE)
     pp.add_argument('--modelo', default=DEFAULT_MODEL_PATH)
     pp.add_argument('--contamination', type=float, default=0.03)
+    pp.add_argument('--seed', type=int, default=42)
+    pp.add_argument(
+        '--banco',
+        action='store_true',
+        help='importa o JSONL de ataques no PostgreSQL',
+    )
+    pp.add_argument(
+        '--substituir',
+        action='store_true',
+        help='apaga eventos "(simulado)" antes de importar',
+    )
     pp.add_argument('--registrar', action='store_true')
     pp.set_defaults(func=cmd_ia_pipeline)
 

@@ -250,3 +250,107 @@ def security_log_stats():
         'today': row[2],
         'crypto_ops': row[3],
     }
+
+
+# ---------------------------------------------------------------------------
+# Importação em lote (simulação → dashboard)
+# ---------------------------------------------------------------------------
+
+_INSERT_SQL = """
+    INSERT INTO security_logs
+      (event_type, severity, user_id, username,
+       ip_address, user_agent, message, details, created_at)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+"""
+
+
+def _row_from_event(ev):
+    """Converte um evento (dict JSONL) em tupla para INSERT."""
+    details = ev.get('details')
+    if isinstance(details, dict):
+        details_text = json.dumps(details, ensure_ascii=False, default=str)
+    else:
+        details_text = details or ''
+
+    ts = ev.get('ts') or ev.get('created_at')
+    if isinstance(ts, datetime):
+        created_at = ts
+    elif isinstance(ts, str) and ts:
+        try:
+            created_at = datetime.fromisoformat(ts)
+        except ValueError:
+            created_at = datetime.now()
+    else:
+        created_at = datetime.now()
+
+    return (
+        ev.get('event_type') or 'UNKNOWN',
+        (ev.get('severity') or 'INFO').upper(),
+        ev.get('user_id'),
+        ev.get('username'),
+        ev.get('ip') or ev.get('ip_address'),
+        ev.get('user_agent'),
+        ev.get('message') or (ev.get('event_type') or 'evento'),
+        details_text,
+        created_at,
+    )
+
+
+def delete_simulated_events():
+    """Remove eventos marcados como '(simulado)' — útil antes de reimportar."""
+    from app.database import get_db
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM security_logs WHERE message LIKE %s",
+                ('%(simulado)%',),
+            )
+            return cur.rowcount
+    finally:
+        conn.close()
+
+
+def import_events_to_db(events, *, batch_size=2000):
+    """
+    Insere um iterável de eventos no PostgreSQL em lotes (executemany).
+    Preserva `ts` como `created_at` para os gráficos por hora.
+    Retorna quantos registros foram inseridos.
+    """
+    from app.database import get_db
+
+    conn = get_db()
+    inserted = 0
+    batch = []
+
+    try:
+        with conn.cursor() as cur:
+            for ev in events:
+                batch.append(_row_from_event(ev))
+                if len(batch) >= batch_size:
+                    cur.executemany(_INSERT_SQL, batch)
+                    inserted += len(batch)
+                    batch.clear()
+            if batch:
+                cur.executemany(_INSERT_SQL, batch)
+                inserted += len(batch)
+        return inserted
+    finally:
+        conn.close()
+
+
+def import_jsonl_to_db(path, *, batch_size=2000):
+    """Lê um arquivo JSONL e grava no banco. Retorna o total inserido."""
+    def _iter():
+        with open(path, encoding='utf-8') as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    yield json.loads(line)
+                except ValueError:
+                    continue
+
+    return import_events_to_db(_iter(), batch_size=batch_size)

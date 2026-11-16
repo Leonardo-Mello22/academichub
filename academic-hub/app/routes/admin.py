@@ -1,8 +1,16 @@
+import json
 import os
 
 from flask import Blueprint, request, session, redirect, render_template, url_for, abort, Response
 from app.database import vulnerable_query, execute_db, query_db
-from app.bigdata.analysis import analyze, find_patterns, iter_db_events, store_patterns
+
+from app.bigdata.analysis import (
+    analyze,
+    find_patterns,
+    iter_db_events,
+    public_report,
+    store_patterns,
+)
 from app.bigdata.anomalies import (
     ANOMALY_TYPES,
     STATUSES,
@@ -10,6 +18,7 @@ from app.bigdata.anomalies import (
     list_anomalies,
     set_anomaly_status,
 )
+from app.bigdata.attack_report import charts_payload, load_attack_report
 from app.bigdata.events import log_security_event, list_security_logs, security_log_stats
 from app.bigdata.ia import (
     DEFAULT_MODEL_PATH,
@@ -103,6 +112,28 @@ def analysis():
         elif acao == 'registrar_ia':
             stored_ia = store_ia_patterns(ia_patterns)
 
+    a_stats = anomaly_stats()
+    chart_data = charts_payload(
+        public_report(report),
+        patterns,
+        ia_patterns,
+        a_stats,
+    )
+    attack_report = load_attack_report()
+    attack_charts = None
+    if attack_report:
+        av = attack_report['avalanche']
+        rows = attack_report['statistical']['rows']
+        attack_charts = {
+            'avalanche': [
+                av.get('plaintext_pct'),
+                av.get('key_pct'),
+                av.get('cbc_pct'),
+            ],
+            'entropy_labels': [r['name'] for r in rows],
+            'entropy_values': [r['entropy'] for r in rows],
+        }
+
     return render_template(
         'admin/analysis.html',
         hours=hours,
@@ -115,6 +146,10 @@ def analysis():
         anomalies=list_anomalies(limit=100),
         anomaly_types=ANOMALY_TYPES,
         statuses=STATUSES,
+        chart_data_json=json.dumps(chart_data, ensure_ascii=False, default=str),
+        attack_charts_json=json.dumps(attack_charts, ensure_ascii=False, default=str),
+        attack_report=attack_report,
+        anomaly_open_stats=a_stats,
     )
 
 
