@@ -1,0 +1,53 @@
+# Render Blueprint — AcademicHub (deploy de laboratório/demonstração)
+#
+# Cria automaticamente:
+#   - um banco PostgreSQL gerenciado (plano free)
+#   - um web service Docker a partir de academic-hub/Dockerfile
+#
+# IMPORTANTE: NÃO definimos FLASK_DEBUG aqui, então o Flask sobe com debug
+# DESLIGADO (o debugger do Werkzeug seria RCE numa URL pública). Ainda assim,
+# este app tem vulnerabilidades intencionais — use só para a demonstração e
+# derrube o serviço depois.
+
+databases:
+  - name: academichub-db
+    databaseName: academichub
+    user: academichub
+    plan: free
+
+services:
+  - type: web
+    name: academichub
+    runtime: docker
+    plan: free
+    # o app está na subpasta academic-hub/ — caminhos relativos à raiz do repo
+    dockerfilePath: ./academic-hub/Dockerfile
+    dockerContext: ./academic-hub
+    autoDeploy: true
+    envVars:
+      - key: PG_HOST
+        fromDatabase:
+          name: academichub-db
+          property: host
+      - key: PG_PORT
+        fromDatabase:
+          name: academichub-db
+          property: port
+      - key: PG_USER
+        fromDatabase:
+          name: academichub-db
+          property: user
+      - key: PG_PASSWORD
+        fromDatabase:
+          name: academichub-db
+          property: password
+      - key: PG_DATABASE
+        fromDatabase:
+          name: academichub-db
+          property: database
+      - key: SECRET_KEY
+        generateValue: true        # chave de sessão forte e aleatória
+      - key: CRYPTO_KEY
+        generateValue: true        # chave da cifra (não usar a do lab)
+      - key: GEMINI_API_KEY
+        sync: false                # opcional: preencha no painel se for usar o assistente

@@ -11,6 +11,8 @@ Organização do pacote `app/` (camadas do projeto):
     seed.py     dados iniciais
 """
 
+import os
+
 from flask import Flask
 
 
@@ -21,11 +23,13 @@ def create_app():
         static_folder='../static'
     )
 
-    app.config['SECRET_KEY'] = 'secret'
+    # Em produção, defina SECRET_KEY por variável de ambiente (um valor fixo
+    # permite forjar sessões). Fallback mantém o lab local funcionando.
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'secret')
     app.config['SESSION_COOKIE_HTTPONLY'] = False
     app.config['SESSION_COOKIE_SECURE'] = False
     app.config['SESSION_COOKIE_SAMESITE'] = None
-    app.config['DEBUG'] = True
+    app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes')
 
     _register_blueprints(app)
 

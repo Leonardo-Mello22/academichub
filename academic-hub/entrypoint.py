@@ -32,4 +32,7 @@ if __name__ == '__main__':
     else:
         print("[*] Banco de dados já populado, pulando seed.")
     port = int(os.environ.get('PORT', 31337))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    # debug=True expõe o debugger do Werkzeug (RCE). Fica DESLIGADO por padrão;
+    # no lab local o docker-compose define FLASK_DEBUG=1 para reativá-lo.
+    debug = os.environ.get('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes')
+    app.run(host='0.0.0.0', port=port, debug=debug)
