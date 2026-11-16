@@ -1,15 +1,26 @@
+import mimetypes
 import os
+import time
 
 from flask import (
     Blueprint,
-    request,
-    session,
+    Response,
+    abort,
     redirect,
     render_template,
+    request,
+    session,
     url_for,
-    abort,
 )
 
+from app.bigdata.crypto_ops import (
+    decrypt,
+    encrypt,
+    get_app_key,
+    is_encrypted_envelope,
+)
+from app.bigdata.events import log_security_event
+from app.crypto import DecryptionError
 from app.database import (
     execute_db,
     query_db,
@@ -94,8 +105,6 @@ def upload_file():
 
     original_name = f.filename
 
-    import time
-
     save_name = (
         f"{int(time.time())}_{original_name}"
     )
@@ -105,7 +114,17 @@ def upload_file():
         save_name
     )
 
-    f.save(save_path)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+    raw = f.read()
+    envelope = encrypt(
+        raw,
+        get_app_key(),
+        context='files',
+    )
+
+    with open(save_path, 'wb') as out:
+        out.write(envelope)
 
     execute_db(
         """
@@ -125,12 +144,16 @@ def upload_file():
         )
     )
 
-    from app.security_log import log_security_event
     log_security_event(
         'FILE_UPLOAD',
         f'Upload de arquivo: {original_name}',
         severity='INFO',
-        details=f'saved_as={save_name}; course_id={course_id}',
+        details={
+            'saved_as': save_name,
+            'course_id': course_id,
+            'encrypted': True,
+            'plaintext_bytes': len(raw),
+        },
     )
 
     return redirect(
@@ -140,10 +163,9 @@ def upload_file():
 
 @files_bp.route('/baixar/<path:filename>')
 def download_file(filename):
-
-    from flask import Response
-    import mimetypes
-    from app.security_log import log_security_event
+    redir = require_login()
+    if redir:
+        return redir
 
     filepath = os.path.normpath(
         os.path.join(
@@ -152,23 +174,35 @@ def download_file(filename):
         )
     )
 
+    if '..' in filename or filename.startswith('/'):
+        log_security_event(
+            'FILE_DOWNLOAD_SUSPICIOUS',
+            f'Download com path suspeito: {filename}',
+            severity='HIGH',
+            details={'resolved': filepath},
+        )
+
     try:
         with open(filepath, 'rb') as f:
             data = f.read()
 
-        mime, _ = mimetypes.guess_type(filepath)
+        if is_encrypted_envelope(data):
+            try:
+                plain = decrypt(
+                    data,
+                    get_app_key(),
+                    context='files',
+                )
+            except DecryptionError:
+                abort(500)
+        else:
+            # Upload legado (antes da integração da cifra).
+            plain = data
+
+        mime, _ = mimetypes.guess_type(filename)
         mime = mime or 'application/octet-stream'
 
-        # Alerta se houver tentativa de path traversal
-        if '..' in filename or filename.startswith('/'):
-            log_security_event(
-                'FILE_DOWNLOAD_SUSPICIOUS',
-                f'Download com path suspeito: {filename}',
-                severity='HIGH',
-                details=f'resolved={filepath}',
-            )
-
-        return Response(data, mimetype=mime)
+        return Response(plain, mimetype=mime)
 
     except FileNotFoundError:
         abort(404)

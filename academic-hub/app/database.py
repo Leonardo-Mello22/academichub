@@ -202,6 +202,27 @@ def init_db():
                 ON security_logs (event_type)
             """)
 
+            # Anomalias detectadas (app.bigdata.anomalies).
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS anomaly_events (
+                    id SERIAL PRIMARY KEY,
+                    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    anomaly_type VARCHAR(32) NOT NULL,
+                    severity VARCHAR(16) NOT NULL DEFAULT 'HIGH',
+                    score FLOAT,
+                    subject VARCHAR(128),
+                    detector VARCHAR(64) NOT NULL,
+                    description TEXT NOT NULL,
+                    evidence JSONB,
+                    status VARCHAR(16) NOT NULL DEFAULT 'OPEN'
+                )
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_anomaly_events_detected_at
+                ON anomaly_events (detected_at DESC)
+            """)
+
     finally:
         conn.close()
 

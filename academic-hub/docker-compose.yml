@@ -16,6 +16,9 @@ services:
       - PG_PASSWORD=academichub123
       - PG_DATABASE=academichub
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CRYPTO_KEY=${CRYPTO_KEY:-AcademicHub-lab-key-nao-usar-em-producao}
+    volumes:
+      - academichub_logs:/app/logs
     restart: unless-stopped
 
   nginx:
@@ -46,4 +49,4 @@ services:
 
 volumes:
   academichub_data:
-  academichub_uploads:
+  academichub_logs:

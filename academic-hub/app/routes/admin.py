@@ -1,6 +1,31 @@
+import json
+import os
+
 from flask import Blueprint, request, session, redirect, render_template, url_for, abort, Response
 from app.database import vulnerable_query, execute_db, query_db
-from app.security_log import log_security_event, list_security_logs, security_log_stats
+
+from app.bigdata.analysis import (
+    analyze,
+    find_patterns,
+    iter_db_events,
+    public_report,
+    store_patterns,
+)
+from app.bigdata.anomalies import (
+    ANOMALY_TYPES,
+    STATUSES,
+    anomaly_stats,
+    list_anomalies,
+    set_anomaly_status,
+)
+from app.bigdata.attack_report import charts_payload, load_attack_report
+from app.bigdata.events import log_security_event, list_security_logs, security_log_stats
+from app.bigdata.ia import (
+    DEFAULT_MODEL_PATH,
+    detect_anomalies,
+    load_model,
+    store_ia_patterns,
+)
 from app.stego import build_credentials
 
 admin_bp = Blueprint('admin', __name__)
@@ -33,6 +58,7 @@ def dashboard():
         'messages': query_db("SELECT COUNT(*) FROM messages", one=True)[0],
     }
     sec = security_log_stats()
+    sec['open_anomalies'] = anomaly_stats()['open']
     return render_template('admin/dashboard.html', stats=stats, sec=sec)
 
 
@@ -52,6 +78,93 @@ def security_logs():
         event_type=event_type or '',
         severity=severity or '',
     )
+
+
+@admin_bp.route('/analise', methods=['GET', 'POST'])
+def analysis():
+    """Análise de padrões (regras + IA) e anomalias registradas."""
+    err = require_admin()
+    if err:
+        return err
+
+    hours = request.values.get('horas', type=int) or 24
+    events = list(iter_db_events(window_hours=hours))
+    report = analyze(events)
+    patterns = find_patterns(report)
+
+    model = None
+    ia_model_loaded = False
+    if os.path.exists(DEFAULT_MODEL_PATH):
+        try:
+            model = load_model(DEFAULT_MODEL_PATH)
+            ia_model_loaded = True
+        except Exception:
+            model = None
+
+    ia_patterns = detect_anomalies(events, model=model)
+
+    stored = None
+    stored_ia = None
+    if request.method == 'POST':
+        acao = request.form.get('acao')
+        if acao == 'registrar':
+            stored = store_patterns(patterns)
+        elif acao == 'registrar_ia':
+            stored_ia = store_ia_patterns(ia_patterns)
+
+    a_stats = anomaly_stats()
+    chart_data = charts_payload(
+        public_report(report),
+        patterns,
+        ia_patterns,
+        a_stats,
+    )
+    attack_report = load_attack_report()
+    attack_charts = None
+    if attack_report:
+        av = attack_report['avalanche']
+        rows = attack_report['statistical']['rows']
+        attack_charts = {
+            'avalanche': [
+                av.get('plaintext_pct'),
+                av.get('key_pct'),
+                av.get('cbc_pct'),
+            ],
+            'entropy_labels': [r['name'] for r in rows],
+            'entropy_values': [r['entropy'] for r in rows],
+        }
+
+    return render_template(
+        'admin/analysis.html',
+        hours=hours,
+        report=report,
+        patterns=patterns,
+        ia_patterns=ia_patterns,
+        ia_model_loaded=ia_model_loaded,
+        stored=stored,
+        stored_ia=stored_ia,
+        anomalies=list_anomalies(limit=100),
+        anomaly_types=ANOMALY_TYPES,
+        statuses=STATUSES,
+        chart_data_json=json.dumps(chart_data, ensure_ascii=False, default=str),
+        attack_charts_json=json.dumps(attack_charts, ensure_ascii=False, default=str),
+        attack_report=attack_report,
+        anomaly_open_stats=a_stats,
+    )
+
+
+@admin_bp.route('/anomalias/<int:anomaly_id>/status', methods=['POST'])
+def anomaly_status(anomaly_id):
+    err = require_admin()
+    if err:
+        return err
+
+    status = request.form.get('status', '')
+    if status not in STATUSES:
+        abort(400)
+
+    set_anomaly_status(anomaly_id, status)
+    return redirect(url_for('admin.analysis'))
 
 
 @admin_bp.route('/usuarios')

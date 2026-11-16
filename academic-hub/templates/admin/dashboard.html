@@ -31,6 +31,14 @@
     <div class="stat-number">{{ sec.login_failures }}</div>
     <div class="stat-label">Falhas de login</div>
   </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ sec.crypto_ops }}</div>
+    <div class="stat-label">Operações criptográficas</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ sec.open_anomalies }}</div>
+    <div class="stat-label">Anomalias abertas</div>
+  </div>
 </div>
 
 <div class="card">
@@ -38,6 +46,7 @@
   <ul class="list-plain">
     <li><a href="/admin/usuarios">Gerenciar Usuários</a></li>
     <li><a href="/admin/logs">Logs de Segurança</a></li>
+    <li><a href="/admin/analise"><strong>Dashboard de Segurança</strong> — gráficos, anomalias e testes da cifra</a></li>
     <li><a href="/avisos/novo">Publicar Aviso</a></li>
     <li><a href="/disciplinas">Ver Disciplinas</a></li>
   </ul>

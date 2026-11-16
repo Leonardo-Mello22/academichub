@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% block title %}Dashboard de Segurança — AcademicHub{% endblock %}
+
+{% macro sev_badge(sev) -%}
+<span class="badge {% if sev in ('HIGH', 'ERROR', 'CRITICAL') %}badge-admin{% elif sev == 'WARNING' %}badge-professor{% else %}badge-global{% endif %}">{{ sev }}</span>
+{%- endmacro %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Dashboard de Segurança</h2>
+  <a href="/admin" class="btn btn-secondary">← Admin</a>
+</div>
+
+<div class="search-bar">
+  <form method="GET" action="/admin/analise">
+    <select name="horas" class="form-control form-select" style="max-width:220px;min-height:48px;">
+      {% for h, label in [(1, 'Última hora'), (24, 'Últimas 24h'), (168, 'Últimos 7 dias'), (720, 'Últimos 30 dias')] %}
+      <option value="{{ h }}" {% if hours == h %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Atualizar análise</button>
+  </form>
+</div>
+
+{% if stored is not none %}
+<div class="alert alert-success">{{ stored }} padrão(ões) de regras registrado(s) como anomalia.</div>
+{% endif %}
+{% if stored_ia is not none %}
+<div class="alert alert-success">{{ stored_ia }} detecção(ões) da IA registrada(s) como anomalia.</div>
+{% endif %}
+
+<div class="dashboard-grid">
+  <div class="card stat-card">
+    <div class="stat-number">{{ report.total }}</div>
+    <div class="stat-label">Eventos analisados</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ report.auth.failures }}</div>
+    <div class="stat-label">Falhas de login</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ report.crypto.encrypt + report.crypto.decrypt }}</div>
+    <div class="stat-label">Operações criptográficas</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ '%.1f' % (report.crypto.decrypt_failure_rate * 100) }}%</div>
+    <div class="stat-label">Falhas de decifragem</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ patterns|length + ia_patterns|length }}</div>
+    <div class="stat-label">Alertas na janela</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-number">{{ anomaly_open_stats.open }}</div>
+    <div class="stat-label">Anomalias abertas</div>
+  </div>
+</div>
+
+{# ---------- Gráficos ---------- #}
+<div class="card">
+  <h3>Indicadores da janela</h3>
+  <div class="charts-grid">
+    <div class="chart-panel">
+      <h4>Volume de eventos por hora</h4>
+      <canvas id="chartHour" height="140"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h4>Por categoria</h4>
+      <canvas id="chartCategory" height="140"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h4>Top tipos de evento</h4>
+      <canvas id="chartType" height="140"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h4>Falhas de login por IP</h4>
+      <canvas id="chartAuthIps" height="140"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h4>Operações criptográficas</h4>
+      <canvas id="chartCrypto" height="140"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h4>Alertas na janela (regras + IA)</h4>
+      <canvas id="chartPatterns" height="140"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h4>Anomalias abertas por tipo</h4>
+      <canvas id="chartAnomalies" height="140"></canvas>
+    </div>
+  </div>
+</div>
+
+{# ---------- Testes da cifra ---------- #}
+<div class="card">
+  <h3>Resultados dos testes à AcademicCipher</h3>
+  {% if attack_report %}
+  <p class="text-muted">
+    Fonte: <code>scripts/ataques/resultados/relatorio_ataques.md</code>
+    {% if attack_report.generated_at %}
+    — gerado em
+    {% if attack_report.generated_at.strftime is defined %}
+      {{ attack_report.generated_at.strftime('%d/%m/%Y %H:%M') }}
+    {% else %}
+      {{ attack_report.generated_at }}
+    {% endif %}
+    {% endif %}
+  </p>
+
+  <div class="dashboard-grid">
+    <div class="card stat-card attack-metric">
+      <div class="stat-number">
+        {% if attack_report.avalanche.plaintext_pct is not none %}
+          {{ '%.1f' % attack_report.avalanche.plaintext_pct }}%
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Avalanche (texto) · ideal 50%</div>
+      <span class="badge {% if attack_report.avalanche.ok %}badge-global{% else %}badge-admin{% endif %}">
+        {% if attack_report.avalanche.ok %}OK{% else %}revisar{% endif %}
+      </span>
+    </div>
+    <div class="card stat-card attack-metric">
+      <div class="stat-number">
+        {% if attack_report.avalanche.key_pct is not none %}
+          {{ '%.1f' % attack_report.avalanche.key_pct }}%
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Avalanche (chave) · ideal 50%</div>
+    </div>
+    <div class="card stat-card attack-metric">
+      <div class="stat-number">
+        {% if attack_report.differential.mean_weight is not none %}
+          {{ '%.1f' % attack_report.differential.mean_weight }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Δout médio / 128 (diferencial)</div>
+      <span class="badge {% if attack_report.differential.viable == False %}badge-global{% else %}badge-admin{% endif %}">
+        {% if attack_report.differential.viable == False %}inviável{% elif attack_report.differential.viable %}explorável{% else %}—{% endif %}
+      </span>
+    </div>
+    <div class="card stat-card attack-metric">
+      <div class="stat-number">
+        {% if attack_report.statistical.avg_entropy is not none %}
+          {{ '%.3f' % attack_report.statistical.avg_entropy }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Entropia média do cifrado (ideal ~8)</div>
+      <span class="badge {% if not attack_report.statistical.any_repeated %}badge-global{% else %}badge-admin{% endif %}">
+        {% if not attack_report.statistical.any_repeated %}sem blocos repetidos{% else %}padrões{% endif %}
+      </span>
+    </div>
+    <div class="card stat-card attack-metric">
+      <div class="stat-number">
+        {% if attack_report.brute_force.pin_attempts is not none %}
+          {{ attack_report.brute_force.pin_attempts }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Força bruta — tentativas (PIN fraco)</div>
+      <span class="badge badge-professor">128 bits inviável</span>
+    </div>
+  </div>
+
+  <div class="charts-grid charts-grid-2">
+    <div class="chart-panel">
+      <h4>Avalanche (%)</h4>
+      <canvas id="chartAvalanche" height="120"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h4>Entropia por cenário</h4>
+      <canvas id="chartEntropy" height="120"></canvas>
+    </div>
+  </div>
+
+  {% if attack_report.conclusion %}
+  <ul class="list-plain attack-conclusion">
+    {% for line in attack_report.conclusion %}
+    <li>{{ line | safe }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% else %}
+  <p class="text-muted">
+    Relatório de ataques ainda não encontrado. Gere com:
+    <code>python -m scripts.ataques.run_all</code>
+  </p>
+  {% endif %}
+</div>
+
+{# ---------- Tabelas ---------- #}
+<div class="card">
+  <h3>Padrões suspeitos — regras ({{ patterns|length }})</h3>
+  {% if patterns %}
+  <table class="table">
+    <thead>
+      <tr><th>Severidade</th><th>Tipo</th><th>Alvo</th><th>Score</th><th>Descrição</th></tr>
+    </thead>
+    <tbody>
+      {% for p in patterns %}
+      <tr>
+        <td>{{ sev_badge(p.severity) }}</td>
+        <td><code>{{ p.anomaly_type }}</code></td>
+        <td>{{ p.subject }}</td>
+        <td>{{ '%.2f' % p.score }}</td>
+        <td>{{ p.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="POST" action="/admin/analise">
+    <input type="hidden" name="horas" value="{{ hours }}">
+    <input type="hidden" name="acao" value="registrar">
+    <button type="submit" class="btn btn-accent">Registrar regras como anomalias</button>
+  </form>
+  {% else %}
+  <p class="text-muted">Nenhum padrão suspeito (regras) nesta janela.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Anomalias — IA Isolation Forest ({{ ia_patterns|length }})</h3>
+  <p class="text-muted">
+    {% if ia_model_loaded %}
+    Modelo treinado carregado (<code>logs/models/isolation_forest.joblib</code>).
+    {% else %}
+    Sem modelo pré-treinado — detecção não supervisionada nesta janela
+    (treine com <code>python -m app.bigdata ia pipeline</code>).
+    {% endif %}
+  </p>
+  {% if ia_patterns %}
+  <table class="table">
+    <thead>
+      <tr><th>Severidade</th><th>Tipo</th><th>Alvo (IP)</th><th>Score</th><th>Descrição</th></tr>
+    </thead>
+    <tbody>
+      {% for p in ia_patterns %}
+      <tr>
+        <td>{{ sev_badge(p.severity) }}</td>
+        <td><code>{{ p.anomaly_type }}</code></td>
+        <td>{{ p.subject }}</td>
+        <td>{{ '%.2f' % p.score }}</td>
+        <td>{{ p.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="POST" action="/admin/analise">
+    <input type="hidden" name="horas" value="{{ hours }}">
+    <input type="hidden" name="acao" value="registrar_ia">
+    <button type="submit" class="btn btn-accent">Registrar IA como anomalias</button>
+  </form>
+  {% else %}
+  <p class="text-muted">Nenhuma anomalia detectada pela IA nesta janela.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Distribuição dos eventos</h3>
+  <table class="table">
+    <thead><tr><th>Tipo de evento</th><th>Quantidade</th></tr></thead>
+    <tbody>
+      {% for etype, n in report.by_type.items() %}
+      <tr><td><code>{{ etype }}</code></td><td>{{ n }}</td></tr>
+      {% else %}
+      <tr><td colspan="2" class="text-muted">Sem eventos na janela.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Anomalias registradas</h3>
+  {% if anomalies %}
+  <table class="table">
+    <thead>
+      <tr><th>Quando</th><th>Severidade</th><th>Tipo</th><th>Alvo</th><th>Detector</th><th>Descrição</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for a in anomalies %}
+      <tr>
+        <td>{{ a.detected_at.strftime('%d/%m %H:%M') }}</td>
+        <td>{{ sev_badge(a.severity) }}</td>
+        <td title="{{ anomaly_types.get(a.anomaly_type, '') }}"><code>{{ a.anomaly_type }}</code></td>
+        <td>{{ a.subject or '—' }}</td>
+        <td>{{ a.detector }}</td>
+        <td>{{ a.description }}</td>
+        <td>
+          <form method="POST" action="/admin/anomalias/{{ a.id }}/status">
+            <select name="status" class="form-control form-select" onchange="this.form.submit()">
+              {% for s in statuses %}
+              <option value="{{ s }}" {% if a.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted">Nenhuma anomalia registrada ainda.</p>
+  {% endif %}
+</div>
+
+<script id="chart-data" type="application/json">{{ chart_data_json | safe }}</script>
+<script id="attack-data" type="application/json">{{ attack_charts_json | safe }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const raw = document.getElementById('chart-data');
+  const attackRaw = document.getElementById('attack-data');
+  if (!raw || typeof Chart === 'undefined') return;
+
+  const data = JSON.parse(raw.textContent || '{}');
+  let attack = null;
+  try { attack = JSON.parse(attackRaw.textContent || 'null'); } catch (e) { attack = null; }
+
+  const teal = '#0f766e';
+  const tealSoft = 'rgba(15, 118, 110, 0.55)';
+  const accent = '#f97316';
+  const accentSoft = 'rgba(249, 115, 22, 0.55)';
+  const slate = '#5b6b73';
+  const rose = '#e11d48';
+  const palette = [teal, accent, '#059669', rose, '#0d5c56', '#ea580c', slate, '#99f6e4'];
+
+  const emptyPlugin = {
+    id: 'empty',
+    afterDraw(chart) {
+      const ds = chart.data.datasets[0];
+      const vals = (ds && ds.data) || [];
+      const has = vals.some(v => Number(v) > 0);
+      if (has || !chart.ctx) return;
+      const { ctx, chartArea, width, height } = chart;
+      if (!chartArea) return;
+      ctx.save();
+      ctx.fillStyle = slate;
+      ctx.font = '14px Plus Jakarta Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sem dados nesta janela', width / 2, (chartArea.top + chartArea.bottom) / 2);
+      ctx.restore();
+    }
+  };
+
+  function bar(id, labels, values, color) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    new Chart(el, {
+      type: 'bar',
+      data: {
+        labels: labels || [],
+        datasets: [{
+          data: values || [],
+          backgroundColor: color || tealSoft,
+          borderColor: typeof color === 'string' ? color.replace('0.55', '1') : teal,
+          borderWidth: 1,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { maxRotation: 45, minRotation: 0, font: { size: 10 } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      },
+      plugins: [emptyPlugin]
+    });
+  }
+
+  function doughnut(id, labels, values) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    new Chart(el, {
+      type: 'doughnut',
+      data: {
+        labels: labels || [],
+        datasets: [{
+          data: values || [],
+          backgroundColor: palette,
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+        }
+      },
+      plugins: [emptyPlugin]
+    });
+  }
+
+  function line(id, labels, values) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    new Chart(el, {
+      type: 'line',
+      data: {
+        labels: labels || [],
+        datasets: [{
+          data: values || [],
+          borderColor: teal,
+          backgroundColor: 'rgba(15, 118, 110, 0.12)',
+          fill: true,
+          tension: 0.25,
+          pointRadius: 0,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { maxTicksLimit: 12, font: { size: 10 } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      },
+      plugins: [emptyPlugin]
+    });
+  }
+
+  line('chartHour', data.by_hour && data.by_hour.labels, data.by_hour && data.by_hour.values);
+  doughnut('chartCategory', data.by_category && data.by_category.labels, data.by_category && data.by_category.values);
+  bar('chartType', data.by_type && data.by_type.labels, data.by_type && data.by_type.values, tealSoft);
+  bar('chartAuthIps', data.auth_fail_ips && data.auth_fail_ips.labels, data.auth_fail_ips && data.auth_fail_ips.values, accentSoft);
+  bar('chartCrypto', data.crypto && data.crypto.labels, data.crypto && data.crypto.values, tealSoft);
+  doughnut('chartPatterns', data.patterns_window && data.patterns_window.labels, data.patterns_window && data.patterns_window.values);
+  bar('chartAnomalies', data.anomalies_open && data.anomalies_open.labels, data.anomalies_open && data.anomalies_open.values, accentSoft);
+
+  if (attack) {
+    bar(
+      'chartAvalanche',
+      ['Texto', 'Chave', 'CBC'],
+      (attack.avalanche || []).map(v => v == null ? 0 : v),
+      tealSoft
+    );
+    bar(
+      'chartEntropy',
+      attack.entropy_labels || [],
+      attack.entropy_values || [],
+      accentSoft
+    );
+  }
+})();
+</script>
+{% endblock %}

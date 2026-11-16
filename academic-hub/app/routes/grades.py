@@ -8,6 +8,7 @@ from flask import (
     abort,
 )
 
+from app.bigdata.events import log_security_event
 from app.database import execute_db, query_db
 
 
@@ -273,9 +274,6 @@ def submit_grade():
             ),
         )
 
-        from app.security_log import (
-            log_security_event,
-        )
 
         log_security_event(
             'GRADE_SUBMIT',
