@@ -39,48 +39,44 @@ class DecryptionError(Exception):
     """Falha de decifragem (chave errada, dado corrompido ou adulterado)."""
 
 
+# Tabelas de tradução (substituição em velocidade de C via bytes.translate).
+_SBOX_T = bytes(SBOX)
+_INV_SBOX_T = bytes(INV_SBOX)
+
+
+def _xor16(a, b):
+    """XOR de dois blocos de 16 bytes, via inteiro (rápido)."""
+    return (int.from_bytes(a, 'big') ^ int.from_bytes(b, 'big')).to_bytes(
+        BLOCK_SIZE, 'big'
+    )
+
+
 # ---------------------------------------------------------------------------
 # Núcleo: cifragem/decifragem de um único bloco (SPN)
 # ---------------------------------------------------------------------------
 
 def encrypt_block(block, round_keys):
     """Cifra um bloco de 16 bytes com a lista de subchaves."""
-    state = bytearray(b ^ k for b, k in zip(block, round_keys[0]))
+    state = _xor16(block, round_keys[0])
 
     for r in range(1, ROUNDS + 1):
-        # SubBytes (confusão)
-        for i in range(BLOCK_SIZE):
-            state[i] = SBOX[state[i]]
+        state = state.translate(_SBOX_T)        # SubBytes (confusão)
+        state = permute_bits(state, BIT_PERM)   # Permutação de bits (difusão)
+        state = _xor16(state, round_keys[r])    # AddRoundKey (XOR)
 
-        # Permutação de bits (difusão)
-        state = bytearray(permute_bits(state, BIT_PERM))
-
-        # AddRoundKey (XOR)
-        rk = round_keys[r]
-        for i in range(BLOCK_SIZE):
-            state[i] ^= rk[i]
-
-    return bytes(state)
+    return state
 
 
 def decrypt_block(block, round_keys):
     """Operação inversa de encrypt_block."""
-    state = bytearray(block)
+    state = bytes(block)
 
     for r in range(ROUNDS, 0, -1):
-        rk = round_keys[r]
-        for i in range(BLOCK_SIZE):
-            state[i] ^= rk[i]
+        state = _xor16(state, round_keys[r])
+        state = permute_bits(state, INV_BIT_PERM)
+        state = state.translate(_INV_SBOX_T)
 
-        state = bytearray(permute_bits(state, INV_BIT_PERM))
-
-        for i in range(BLOCK_SIZE):
-            state[i] = INV_SBOX[state[i]]
-
-    for i in range(BLOCK_SIZE):
-        state[i] ^= round_keys[0][i]
-
-    return bytes(state)
+    return _xor16(state, round_keys[0])
 
 
 # ---------------------------------------------------------------------------

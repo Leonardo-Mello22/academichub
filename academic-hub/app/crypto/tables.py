@@ -64,21 +64,53 @@ SBOX, INV_SBOX = _build_sbox(_SBOX_SEED)
 BIT_PERM, INV_BIT_PERM = _build_bit_permutation(_PERM_SEED)
 
 
+def _build_perm_lookup(table):
+    """
+    Pré-computa a permutação como tabela por byte (16 x 256 valores de 128 bits).
+
+    Mantém exatamente a mesma semântica de `out_i = in_{table[i]}`, mas troca o
+    laço de 128 bits por 16 buscas de tabela — muito mais rápido em Python puro,
+    sem alterar o resultado (cifragem e decifragem continuam compatíveis).
+    """
+    # posição de saída de cada bit de entrada j (índice i tal que table[i] == j)
+    pos_out = [0] * BLOCK_BITS
+    for i, j in enumerate(table):
+        pos_out[j] = i
+
+    lookup = []
+    for p in range(BLOCK_SIZE):
+        col = [0] * 256
+        base = p * 8
+        for v in range(256):
+            acc = 0
+            for b in range(8):
+                if (v >> (7 - b)) & 1:
+                    acc |= 1 << (BLOCK_BITS - 1 - pos_out[base + b])
+            col[v] = acc
+        lookup.append(col)
+    return lookup
+
+
+_PERM_CACHE = {}
+
+
 def permute_bits(block, table):
     """
     Aplica uma permutação de bits a um bloco de 16 bytes.
 
-    `table` é BIT_PERM (cifragem) ou INV_BIT_PERM (decifragem). Converte o bloco
-    em um inteiro de 128 bits (big-endian, MSB primeiro) e reposiciona cada bit.
+    `table` é BIT_PERM (cifragem) ou INV_BIT_PERM (decifragem). Usa uma tabela
+    pré-computada (cacheada por tabela) para reposicionar os 128 bits.
     """
-    n = int.from_bytes(block, 'big')
-    out = 0
+    lookup = _PERM_CACHE.get(id(table))
+    if lookup is None:
+        lookup = _build_perm_lookup(table)
+        _PERM_CACHE[id(table)] = lookup
 
-    for i in range(BLOCK_BITS):
-        bit = (n >> (BLOCK_BITS - 1 - table[i])) & 1
-        out |= bit << (BLOCK_BITS - 1 - i)
+    acc = 0
+    for p in range(BLOCK_SIZE):
+        acc |= lookup[p][block[p]]
 
-    return out.to_bytes(BLOCK_SIZE, 'big')
+    return acc.to_bytes(BLOCK_SIZE, 'big')
 
 
 def _self_check():
